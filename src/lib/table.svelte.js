@@ -4,8 +4,14 @@
 // own hand); writes go through the `game` Edge Function. Realtime pushes every
 // committed change, and each update carries a version so late or duplicate
 // messages are ignored.
+//
+// Optimistic moves: your own actions are queued and sent one at a time. While
+// they're in flight, `view` shows their predicted result (engine/predict.js),
+// replayed on top of the latest confirmed state. The server's answer replaces
+// the prediction; if it rejects a move, that move and anything queued after it
+// are dropped and the board snaps back.
 
-import { mergeView } from '$engine';
+import { mergeView, predictView } from '$engine';
 import { callGame } from './api.js';
 import { load, save } from './storage.js';
 import { supabase } from './supabase.js';
@@ -24,8 +30,13 @@ class TableSession {
   /** Set when we discover we're no longer seated (kicked / game deleted). */
   removed = $state(false);
 
-  view = $derived(mergeView(this.pub, this.priv));
+  /** Predicted { pub, priv } while your own moves are in flight, else null. */
+  optimistic = $state.raw(null);
 
+  view = $derived(mergeView(this.optimistic?.pub ?? this.pub, this.optimistic?.priv ?? this.priv));
+
+  #queue = []; // [{ id, gameId, action, predicted, resolve, reject }]
+  #sending = false;
   #channel = null;
   #heartbeat = null;
   #pubVersion = 0;
@@ -86,9 +97,66 @@ class TableSession {
     return res;
   }
 
-  /** Submit a game action. Each gets a unique id so a retried request can't apply twice. */
+  /**
+   * Submit a game action. It shows immediately if its result can be predicted,
+   * then goes to the server, which validates it. Each action carries a unique
+   * id so a retried request can't apply twice.
+   * @returns {{ predicted: boolean, done: Promise<object> }}
+   */
   act(action) {
-    return this.send('action', { action: { ...action, id: globalThis.crypto.randomUUID() } });
+    const entry = { id: globalThis.crypto.randomUUID(), gameId: this.gameId, action };
+    const done = new Promise((resolve, reject) => Object.assign(entry, { resolve, reject }));
+    this.#queue.push(entry);
+    this.#recompute();
+    this.#pump();
+    return { predicted: entry.predicted === true, done };
+  }
+
+  /** Send queued actions strictly in order, so a trail is never built before the one it extends. */
+  async #pump() {
+    if (this.#sending) return;
+    this.#sending = true;
+    try {
+      while (this.#queue.length) {
+        const entry = this.#queue[0];
+        let res;
+        try {
+          res = await callGame('action', { gameId: entry.gameId, action: { ...entry.action, id: entry.id } });
+        } catch (err) {
+          if (this.#queue[0] !== entry) continue; // table was left meanwhile
+          const dropped = this.#queue.splice(0);
+          this.#recompute();
+          entry.reject(err);
+          for (const later of dropped.slice(1)) later.reject(cancelled());
+          continue;
+        }
+        if (this.#queue[0] !== entry) continue;
+        this.#queue.shift();
+        if (res.gameId === this.gameId) this.applyResponse(res);
+        else this.#recompute();
+        entry.resolve(res);
+      }
+    } finally {
+      this.#sending = false;
+    }
+  }
+
+  /** Replay queued moves on top of the latest confirmed state. */
+  #recompute() {
+    let pub = this.pub;
+    let priv = this.priv;
+    const confirmed = new Set(pub?.appliedActions ?? []);
+    let predicted = false;
+    for (const entry of this.#queue) {
+      if (confirmed.has(entry.id)) continue; // already in the confirmed state
+      const next = predictView(pub, priv, entry.action);
+      entry.predicted ??= next !== null;
+      if (!next) break; // can't see past a move only the server can resolve
+      pub = next.pub;
+      priv = next.priv;
+      predicted = true;
+    }
+    this.optimistic = predicted ? { pub, priv } : null;
   }
 
   /** Pull the latest rows (used on connect, reconnect and tab focus). */
@@ -135,12 +203,14 @@ class TableSession {
     if (!pub || version < this.#pubVersion) return;
     this.#pubVersion = version;
     this.pub = pub;
+    if (this.#queue.length || this.optimistic) this.#recompute();
   }
 
   #applyPrivate(priv, version) {
     if (!priv || version < this.#privVersion) return;
     this.#privVersion = version;
     this.priv = priv;
+    if (this.#queue.length || this.optimistic) this.#recompute();
   }
 
   #connect() {
@@ -165,6 +235,11 @@ class TableSession {
         this.online = new Set(Object.keys(channel.presenceState()));
       })
       .on('broadcast', { event: 'nudge' }, () => this.refresh())
+      // The database feed starts a moment after SUBSCRIBED; re-sync once it's
+      // really listening so nothing committed in between is missed.
+      .on('system', {}, (payload) => {
+        if (payload?.extension === 'postgres_changes' && payload?.status === 'ok') this.refresh();
+      })
       .subscribe((status) => {
         if (channel !== this.#channel) return;
         if (status === 'SUBSCRIBED') {
@@ -193,6 +268,8 @@ class TableSession {
     clearInterval(this.#heartbeat);
     this.#heartbeat = null;
     if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', this.#onVisible);
+    for (const entry of this.#queue.splice(0)) entry.reject(cancelled());
+    this.optimistic = null;
     this.gameId = null;
     this.pub = null;
     this.priv = null;
@@ -202,6 +279,10 @@ class TableSession {
     this.#pubVersion = 0;
     this.#privVersion = 0;
   }
+}
+
+function cancelled() {
+  return Object.assign(new Error('Move cancelled.'), { code: 'CANCELLED' });
 }
 
 export const table = new TableSession();

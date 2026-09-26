@@ -24,6 +24,10 @@ export function publicView(s) {
     lastRoll: s.lastRoll,
     pendingDiscards: s.pendingDiscards,
     trades: s.trades,
+    nextTradeId: s.nextTradeId,
+    // Random ids of the latest applied actions, so a client can tell when its
+    // own optimistic move has been confirmed (they reveal nothing else).
+    appliedActions: s.recentActions.slice(-10),
     achievements: s.achievements,
     roadLengths: s.roadLengths,
     winner: s.winner,

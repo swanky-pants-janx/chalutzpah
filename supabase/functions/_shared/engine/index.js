@@ -6,7 +6,8 @@ export * from './board.js';
 export * from './errors.js';
 export * from './hand.js';
 export * from './rules.js';
-export { applyAction, produce, updateLongestRoad, checkVictory, resolveAbsent } from './actions.js';
+export { applyAction, simulateAction, produce, updateLongestRoad, checkVictory, resolveAbsent } from './actions.js';
+export { predictView } from './predict.js';
 export {
   claimHost,
   createGame,

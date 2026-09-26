@@ -91,8 +91,16 @@ const EFFECTS = {
   error: (ac) => tone(ac, { freq: 150, dur: 0.18, gain: 0.12, type: 'square' }),
 };
 
+// A predicted move and its confirmation both announce the same event;
+// only play a given effect once per short window.
+const lastPlayed = new Map();
+const REPEAT_MS = 900;
+
 export function play(name) {
   if (sound.muted || !EFFECTS[name]) return;
+  const now = Date.now();
+  if (now - (lastPlayed.get(name) ?? 0) < REPEAT_MS) return;
+  lastPlayed.set(name, now);
   try {
     const ac = audio();
     if (ac) EFFECTS[name](ac);

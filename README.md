@@ -61,8 +61,13 @@ click "Build Trail"
 - **One rules engine, two runtimes.** `supabase/functions/_shared/engine/` is plain ES-module JavaScript with no dependencies. The Edge Function (Deno) uses it to validate every move. The browser imports the same files (Vite alias `$engine`) only to highlight legal moves. The server never trusts the client.
 - **State machine.** `status: lobby → setup → playing → finished`, with phases `setup_settlement → setup_road` (snake order), then `roll → [discard →] robber → main` for a 7, `roll → main` otherwise, `main → road_building → main` for Pathfinders, and `END_TURN` → next player's `roll`. See the header of `engine/actions.js`.
 - **Hidden information stays hidden.** The full state (every hand, the shuffled deck) lives in `game_secrets`, which clients cannot read at all. Clients get a *public view* (card counts only) and their *own* private row. Row-level security (RLS) filters Realtime too, so other players' hands never reach your browser.
+- **Instant moves.** Your own moves appear the moment you click: the browser predicts the result with the same engine (`engine/predict.js`) and queues the move. The server's answer replaces the prediction, and a rejected move rolls back with its message. Anything that needs dice, a hidden card or another player's hand (rolling, drawing, the Jackal's steal, Chutzpah!) waits for the server. A test replays full bot games and checks every prediction against the server's actual result.
 - **Race conditions.** Every commit is compare-and-swap on a version number inside one SQL transaction. If two players accept the same trade at once, one commits and the other is re-validated against the new state and gets "That offer is no longer on the table". Every action also carries a unique id, so a retried request can't apply twice.
 - **Randomness** (dice, shuffles, steals) comes from `crypto.getRandomValues` on the server. Maps are generated from a seed, so the same seed always produces the same island, and 6s/8s never touch.
+
+### Speed
+
+The game server is pinned to the database's region (`eu-west-1`, see `src/lib/api.js`; override with `VITE_SUPABASE_FUNCTION_REGION`). It verifies logins locally against the project's published signing key, and a warm instance reuses the last game state it saw. The compare-and-swap commit still guarantees nothing stale is ever saved.
 
 ### Identity and reconnecting
 
@@ -102,7 +107,7 @@ tests/                       engine, server, UI-logic and database tests
 ## Tests
 
 ```bash
-npm test                     # 112 tests, ~3s
+npm test                     # 117 tests, ~4s
 SIM_GAMES=300 npm test       # plus 300 extra full bot games as a stress test
 ```
 

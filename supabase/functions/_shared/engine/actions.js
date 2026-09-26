@@ -81,6 +81,34 @@ export function applyAction(state, userId, action, ctx = {}) {
   return s;
 }
 
+const NEEDS_THE_SERVER = new Error('This move depends on something only the server knows.');
+
+/**
+ * Try one of the actor's own actions against a best-knowledge state (see
+ * predict.js) so the UI can show the result before the server confirms it.
+ * Returns null whenever the outcome needs randomness (dice, steals, card
+ * draws) or information the client doesn't have — those wait for the server.
+ * The server always re-validates; this never decides anything.
+ */
+export function simulateAction(state, actorIdx, action) {
+  if (!action || !Object.hasOwn(HANDLERS, action.type) || action.type === 'FORCE_SKIP') return null;
+  const s = structuredClone(state);
+  const env = {
+    rng: () => {
+      throw NEEDS_THE_SERVER;
+    },
+    now: Date.now(),
+    idle: new Set(),
+  };
+  try {
+    HANDLERS[action.type](s, actorIdx, action, env);
+    checkVictory(s, env);
+  } catch {
+    return null;
+  }
+  return s;
+}
+
 export function makeEnv(s, ctx = {}) {
   const idle = new Set();
   for (const userId of ctx.idle ?? []) {

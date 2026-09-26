@@ -34,20 +34,37 @@
   let dialog = $state(null); // 'trade' | 'harvest' | 'chutzpah' | 'rules' | { victims, hex }
   let gameOverOpen = $state(true);
 
-  /** Send an action; the server validates it and Realtime brings everyone the result. */
+  /**
+   * Send an action; the server validates it and Realtime brings everyone the
+   * result. Predictable moves show instantly and don't lock the controls;
+   * ones only the server can resolve (dice, card draws…) lock until it answers.
+   */
   async function run(action) {
     if (busy) return false;
-    busy = true;
+    const { predicted, done } = table.act(action);
+    if (!predicted) busy = true;
     try {
-      await table.act(action);
+      await done;
       return true;
     } catch (err) {
-      play('error');
-      toastError(err);
+      if (err?.code !== 'CANCELLED') {
+        play('error');
+        toastError(err);
+      }
       return false;
     } finally {
-      busy = false;
+      if (!predicted) busy = false;
     }
+  }
+
+  // Dice start tumbling the moment you click; they land when the server rolls.
+  let rollPending = $state(false);
+  async function roll() {
+    if (busy || rollPending) return;
+    rollPending = true;
+    play('dice');
+    await run({ type: 'ROLL_DICE' });
+    rollPending = false;
   }
 
   // Drop any half-chosen build mode when the turn or phase moves on.
@@ -95,11 +112,9 @@
     else await run({ type: 'PLAY_DEV_CARD', card, resource: resources[0] });
   }
 
-  async function offer(terms) {
-    if (await run({ type: 'OFFER_TRADE', ...terms })) {
-      dialog = null;
-      toast('Offer placed on the table.');
-    }
+  function offer(terms) {
+    dialog = null;
+    run({ type: 'OFFER_TRADE', ...terms });
   }
 
   // ------------------------------------------------------------ absent players
@@ -153,6 +168,7 @@
   $effect(() => {
     const entries = [...view.log, ...(table.priv?.log ?? [])];
     const latest = entries.reduce((m, e) => Math.max(m, e.seq), 0);
+    if (heardSeq !== null && latest < heardSeq) heardSeq = latest; // a predicted move was rolled back
     if (heardSeq === null || latest <= heardSeq) {
       heardSeq = Math.max(heardSeq ?? 0, latest);
       return;
@@ -198,7 +214,7 @@
     if (event.target.closest?.('input, textarea, [role="dialog"]') || event.metaKey || event.ctrlKey) return;
     const key = event.key.toLowerCase();
     if (key === 'escape') mode = null;
-    else if (key === 'r' && controls?.canRoll) run({ type: 'ROLL_DICE' });
+    else if (key === 'r' && controls?.canRoll) roll();
     else if (key === 'e' && controls?.canEndTurn) run({ type: 'END_TURN' });
   }
 
@@ -278,9 +294,9 @@
           {view}
           {controls}
           {busy}
-          rolling={!!rollShow}
+          rolling={!!rollShow || rollPending}
           {skippable}
-          onroll={() => run({ type: 'ROLL_DICE' })}
+          onroll={roll}
           onend={() => run({ type: 'END_TURN' })}
           onskip={skipAway}
         />
