@@ -1,0 +1,336 @@
+/* Chalutzpah — global styles
+   Built on the Janx web system: zero reset, Inter everywhere, 25px radius,
+   25px gaps, gradient buttons with a subtle border + shadow, 1600px max width. */
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --night: #121a24;
+  --ink: #1b2430;
+  --ink-2: #243142;
+  --ink-3: #33455d;
+  --parchment: #f7efdc;
+  --parchment-2: #efe3c6;
+  --parchment-3: #e2cfa6;
+  --text: #2b2118;
+  --text-muted: #6f5d48;
+  --text-light: #f7efdc;
+  --text-light-muted: rgba(247, 239, 220, 0.66);
+  --terracotta: #d4693b;
+  --pomegranate: #b3263e;
+  --saffron: #eaa53a;
+  --sea: #237b93;
+  --sea-deep: #134c5d;
+  --olive: #6f7f3a;
+
+  --brand-1: #e0773f;
+  --brand-2: #b3263e;
+  --sea-1: #2b8ea8;
+  --sea-2: #134c5d;
+
+  --radius: 25px;
+  --gap: 25px;
+  --section-space: 64px;
+  --max-width: 1600px;
+  --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  --shadow-lift: 0 10px 30px rgba(0, 0, 0, 0.16);
+  --font: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  color-scheme: dark;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text-light);
+  background:
+    radial-gradient(1200px 700px at 15% -10%, rgba(234, 165, 58, 0.16), transparent 60%),
+    radial-gradient(1000px 800px at 110% 110%, rgba(35, 123, 147, 0.22), transparent 60%),
+    var(--night);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+}
+
+img,
+svg {
+  display: block;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: var(--saffron);
+}
+
+:focus-visible {
+  outline: 3px solid rgba(234, 165, 58, 0.7);
+  outline-offset: 3px;
+}
+
+.container {
+  width: 100%;
+  max-width: var(--max-width);
+  margin-inline: auto;
+  padding-inline: clamp(16px, 4vw, 48px);
+}
+
+/* ---------------------------------------------------------------- Buttons */
+
+.btn {
+  margin: 25px;
+  padding: 14px 28px;
+  border-radius: 25px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: linear-gradient(135deg, var(--brand-1), var(--brand-2));
+  box-shadow: var(--shadow);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    filter 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.07);
+  box-shadow: var(--shadow-lift);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+  filter: grayscale(0.35);
+}
+
+.btn--sea {
+  background: linear-gradient(135deg, var(--sea-1), var(--sea-2));
+}
+
+.btn--light {
+  background: linear-gradient(135deg, #fffaf0, var(--parchment-2));
+  border-color: rgba(43, 33, 24, 0.16);
+  color: var(--text);
+}
+
+.btn--dark {
+  background: linear-gradient(135deg, var(--ink-3), var(--ink));
+}
+
+.btn--gold {
+  background: linear-gradient(135deg, #f3c060, #d98a2b);
+  color: #2b2118;
+}
+
+.btn--big {
+  padding: 20px 44px;
+  font-size: 1.15rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.btn--small {
+  padding: 9px 16px;
+  font-size: 0.86rem;
+}
+
+/* Dense in-game HUD: spacing comes from the parent's 25px gap instead. */
+.btn--tight {
+  margin: 0;
+}
+
+.btn--block {
+  width: 100%;
+}
+
+.icon-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 25px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: linear-gradient(135deg, var(--ink-3), var(--ink));
+  box-shadow: var(--shadow);
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+  color: var(--text-light);
+  transition: filter 0.15s ease;
+}
+
+.icon-btn:hover {
+  filter: brightness(1.2);
+}
+
+/* ---------------------------------------------------------------- Surfaces */
+
+.card {
+  background: linear-gradient(180deg, #fbf5e7, var(--parchment));
+  color: var(--text);
+  border-radius: 25px;
+  border: 1px solid rgba(43, 33, 24, 0.08);
+  box-shadow: var(--shadow);
+  padding: 25px;
+}
+
+.card--dark {
+  background: linear-gradient(180deg, rgba(51, 69, 93, 0.72), rgba(27, 36, 48, 0.82));
+  color: var(--text-light);
+  border-color: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+}
+
+.eyebrow {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.card--dark .eyebrow {
+  color: var(--text-light-muted);
+}
+
+/* ---------------------------------------------------------------- Forms */
+
+.field {
+  display: grid;
+  gap: 10px;
+}
+
+.field > span {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.input {
+  width: 100%;
+  padding: 16px 22px;
+  border-radius: 25px;
+  border: 1px solid rgba(43, 33, 24, 0.18);
+  background: #fffdf7;
+  color: var(--text);
+  font-size: 1.1rem;
+  font-weight: 500;
+  box-shadow: var(--shadow);
+}
+
+.input:focus {
+  outline: 3px solid rgba(212, 105, 59, 0.35);
+  border-color: var(--terracotta);
+}
+
+.input--code {
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.segmented {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.segmented button {
+  flex: 1;
+  min-width: 64px;
+  padding: 12px 16px;
+  border-radius: 25px;
+  border: 1px solid rgba(43, 33, 24, 0.16);
+  background: #fffdf7;
+  color: var(--text);
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
+
+.segmented button[aria-pressed='true'] {
+  background: linear-gradient(135deg, var(--brand-1), var(--brand-2));
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* ---------------------------------------------------------------- Utility */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

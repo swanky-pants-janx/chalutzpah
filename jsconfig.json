@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "target": "ES2022",
+    "checkJs": false,
+    "baseUrl": ".",
+    "paths": {
+      "$engine": ["./supabase/functions/_shared/engine/index.js"]
+    }
+  },
+  "include": ["src/**/*", "tests/**/*", "supabase/functions/_shared/**/*"]
+}

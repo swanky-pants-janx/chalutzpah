@@ -1,0 +1,26 @@
+{
+  "name": "chalutzpah",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Chalutzpah — a multiplayer hex-settling board game for friends.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:push": "supabase db push",
+    "functions:deploy": "supabase functions deploy game --use-api"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.2"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "svelte": "^5.57.1",
+    "vite": "^8.3.1",
+    "vitest": "^5.0.2"
+  }
+}
