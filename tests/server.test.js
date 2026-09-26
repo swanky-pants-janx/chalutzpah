@@ -243,3 +243,78 @@ describe('skipping absent players', () => {
     expect(skipped.public.turn.current).not.toBe(s.turn.current);
   });
 });
+
+describe('warm-instance cache', () => {
+  /** Two server instances (like two Edge Function isolates) sharing one database. */
+  async function twoInstances() {
+    const store = createMemoryStore();
+    const one = createHandler({ store, rng: mulberry32(5), now: () => 0 });
+    const two = createHandler({ store, rng: mulberry32(6), now: () => 0 });
+    const created = await one('host', { op: 'create', username: 'Host' });
+    await one('guest-1', { op: 'join', code: created.public.code, username: 'Guest' });
+    await one('host', { op: 'start', gameId: created.gameId });
+    const gameId = created.gameId;
+    const state = () => store.games.get(gameId).state;
+    const user = (idx) => state().players[idx].userId;
+    // play setup through instance one so it holds a cached copy
+    while (state().status === 'setup') {
+      const s = state();
+      const cur = s.turn.current;
+      const v = legalSettlementVertices(s, cur, { setup: true })[0];
+      await one(user(cur), { op: 'action', gameId, action: { type: 'BUILD_SETTLEMENT', vertex: v } });
+      const e = legalRoadEdges(state(), cur, { fromVertex: v })[0];
+      await one(user(cur), { op: 'action', gameId, action: { type: 'BUILD_ROAD', edge: e } });
+    }
+    return { one, two, gameId, state, user };
+  }
+
+  it('a move that is illegal only against a stale cached copy still succeeds', async () => {
+    const { one, two, gameId, state, user } = await twoInstances();
+    const first = state().turn.current;
+    // instance two advances the game; instance one's cache still says it's `first`'s roll
+    await two(user(first), { op: 'action', gameId, action: { type: 'ROLL_DICE' } });
+    while (state().phase !== 'main') {
+      const s = state();
+      if (s.phase === 'discard') {
+        const i = Number(Object.keys(s.pendingDiscards)[0]);
+        const hand = s.players[i].resources;
+        const bundle = {};
+        let left = s.pendingDiscards[i];
+        for (const r of Object.keys(hand)) {
+          const n = Math.min(hand[r], left);
+          if (n) bundle[r] = n;
+          left -= n;
+        }
+        await two(user(i), { op: 'action', gameId, action: { type: 'DISCARD', resources: bundle } });
+      } else {
+        await two(user(first), { op: 'action', gameId, action: { type: 'MOVE_ROBBER', hex: s.robber === 0 ? 1 : 0, victim: null } });
+      }
+    }
+    await two(user(first), { op: 'action', gameId, action: { type: 'END_TURN' } });
+    const second = state().turn.current;
+    const res = await one(user(second), { op: 'action', gameId, action: { type: 'ROLL_DICE' } });
+    expect(res.ok, JSON.stringify(res.error)).toBe(true);
+    expect(res.public.turn.current).toBe(second);
+  });
+
+  it('a move that a stale cached copy would allow is still rejected', async () => {
+    const { one, two, gameId, state, user } = await twoInstances();
+    const first = state().turn.current;
+    await two(user(first), { op: 'action', gameId, action: { type: 'ROLL_DICE' } });
+    // instance one's cache still thinks nobody has rolled
+    const res = await one(user(first), { op: 'action', gameId, action: { type: 'ROLL_DICE' } });
+    expect(res.ok).toBe(false);
+    expect(res.error.code).toBe('WRONG_PHASE');
+    expect(state().log.filter((e) => e.kind === 'roll')).toHaveLength(1);
+  });
+
+  it('never answers a no-op from a stale cached copy', async () => {
+    const { one, two, gameId, state, user } = await twoInstances();
+    const first = state().turn.current;
+    await two(user(first), { op: 'action', gameId, action: { type: 'ROLL_DICE' } });
+    const code = state().code;
+    // re-joining is a no-op; the reply must reflect the roll made via instance two
+    const res = await one(user(first), { op: 'join', code, username: 'whatever' });
+    expect(res.public.lastRoll).not.toBeNull();
+  });
+});

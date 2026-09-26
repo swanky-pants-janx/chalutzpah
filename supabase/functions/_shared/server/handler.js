@@ -24,7 +24,7 @@ const CODE_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
 const CODE_LENGTH = 5;
 const CODE_PATTERN = new RegExp(`^[${CODE_ALPHABET}]{${CODE_LENGTH}}$`);
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const MAX_COMMIT_ATTEMPTS = 6;
+const MAX_COMMIT_ATTEMPTS = 7;
 
 export function makeGameCode(rng) {
   let code = '';
@@ -60,33 +60,67 @@ export function createHandler({ store, rng = engine.cryptoRng(), now = () => Dat
     };
   }
 
+  // Warm-instance cache of the last state this instance saw per game. It only
+  // ever saves the initial database read: a cached state is trusted solely when
+  // the compare-and-swap commit proves it was current. Anything that would be
+  // answered from the cache without a commit (a rejection, a no-op, a replayed
+  // action) is re-checked against a fresh read first.
+  const cache = new Map(); // gameId → { state, version }
+  const CACHE_LIMIT = 200;
+
+  function remember(gameId, record) {
+    cache.delete(gameId);
+    cache.set(gameId, record);
+    if (cache.size > CACHE_LIMIT) cache.delete(cache.keys().next().value);
+  }
+
   /** Load → transform → compare-and-swap commit, retrying on concurrent writes. */
   async function mutate(gameId, userId, transform, { duplicateOk = false } = {}) {
     if (typeof gameId !== 'string' || !UUID_PATTERN.test(gameId)) {
       throw new GameError('BAD_REQUEST', 'Missing or invalid game id.');
     }
     for (let attempt = 0; attempt < MAX_COMMIT_ATTEMPTS; attempt++) {
-      const record = await store.load(gameId);
-      if (!record) throw new GameError('NOT_FOUND', 'That game no longer exists.');
+      const cached = attempt === 0 ? cache.get(gameId) : undefined;
+      const record = cached ?? (await store.load(gameId));
+      if (!record) {
+        cache.delete(gameId);
+        throw new GameError('NOT_FOUND', 'That game no longer exists.');
+      }
+      if (!cached) remember(gameId, record);
 
       let next;
       try {
         next = await transform(record.state);
       } catch (err) {
+        if (cached) {
+          cache.delete(gameId);
+          continue; // might only be illegal against a stale copy
+        }
         if (duplicateOk && err instanceof GameError && err.code === 'DUPLICATE') {
           return respond(record.state, userId, record.version);
         }
         throw err;
       }
 
-      if (next === record.state) return respond(record.state, userId, record.version);
+      if (next === record.state) {
+        if (cached) {
+          cache.delete(gameId);
+          continue; // never answer from an unverified copy
+        }
+        return respond(record.state, userId, record.version);
+      }
       if (next.players.length === 0) {
+        cache.delete(gameId);
         await store.remove(gameId);
         return { ok: true, gameId: null, version: null, public: null, private: null };
       }
       const version = await store.commit(gameId, record.version, engine.snapshot(next));
-      if (version != null) return respond(next, userId, version);
-      // Someone else committed first: re-read and re-validate against the new state.
+      if (version != null) {
+        remember(gameId, { state: next, version });
+        return respond(next, userId, version);
+      }
+      // Someone else committed first (or the cached copy was stale): re-read and re-validate.
+      cache.delete(gameId);
     }
     throw new GameError('BUSY', 'The table is busy — please try that again.');
   }

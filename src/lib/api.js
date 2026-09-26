@@ -1,4 +1,10 @@
+import { FunctionRegion } from '@supabase/supabase-js';
 import { supabase } from './supabase.js';
+
+// Run the game server in the same region as the database (measured ~100 ms
+// faster per move than letting Supabase pick the nearest edge). Override with
+// VITE_SUPABASE_FUNCTION_REGION if the project lives in another region.
+const REGION = import.meta.env.VITE_SUPABASE_FUNCTION_REGION || FunctionRegion.EuWest1;
 
 export class GameApiError extends Error {
   constructor(code, message) {
@@ -9,7 +15,7 @@ export class GameApiError extends Error {
 
 /** Call the `game` Edge Function. Resolves with its payload or throws GameApiError. */
 export async function callGame(op, payload = {}) {
-  const { data, error } = await supabase.functions.invoke('game', { body: { op, ...payload } });
+  const { data, error } = await supabase.functions.invoke('game', { body: { op, ...payload }, region: REGION });
   if (error) {
     let body = null;
     try {
