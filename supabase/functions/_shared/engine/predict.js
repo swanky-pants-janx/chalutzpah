@@ -75,6 +75,7 @@ function moveJackalOnly(shadow, me, { hex }) {
   s.robber = hex;
   s.phase = s.turn.robberReturn ?? 'main';
   s.turn.robberReturn = null;
+  s.turn.robberSource = null;
   return s;
 }
 

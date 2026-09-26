@@ -319,6 +319,7 @@ function rollDice(s, actor, _action, env) {
     });
     s.pendingDiscards = pending;
     s.turn.robberReturn = 'main';
+    s.turn.robberSource = 'seven';
     log(s, ['The Jackal prowls! Nothing is gathered.'], 'jackal');
     if (Object.keys(pending).length > 0) {
       s.phase = 'discard';
@@ -395,10 +396,13 @@ function discard(s, actor, { resources }) {
   if (Object.keys(s.pendingDiscards).length === 0) s.phase = 'robber';
 }
 
-function moveRobber(s, actor, { hex, victim = null }, env) {
+function moveRobber(s, actor, { hex, victim = null, resource = null }, env) {
   requireCurrent(s, actor);
   requirePhase(s, 'robber');
   const h = requireIndex(hex, HEX_COUNT, 'tile');
+  // House rule: a Watchman names what it's after (a 7 still steals at random).
+  const choosy = s.settings.watchmanChoice === true && s.turn.robberSource === 'watchman';
+  if (choosy && resource != null && !isResource(resource)) throw new GameError('BAD_RESOURCE', 'Name a resource.');
   if (h === s.robber) throw new GameError('SAME_TILE', 'The Jackal must move to a different tile.');
 
   const victims = robberVictims(s, actor, h);
@@ -415,17 +419,26 @@ function moveRobber(s, actor, { hex, victim = null }, env) {
   log(s, [P(s, actor), ` sent the Jackal to the ${where}.`], 'jackal');
 
   if (victims.length > 0) {
-    const cards = handToList(s.players[victim].resources);
-    const stolen = cards[randomInt(env.rng, cards.length)];
-    s.players[victim].resources[stolen] -= 1;
+    const hand = s.players[victim].resources;
+    const named = choosy ? resource : null;
+    const found = named !== null && hand[named] > 0;
+    let stolen = named;
+    if (!found) {
+      const cards = handToList(hand);
+      stolen = cards[randomInt(env.rng, cards.length)];
+    }
+    hand[stolen] -= 1;
     s.players[actor].resources[stolen] += 1;
     log(s, [P(s, actor), ' snatched a card from ', P(s, victim), '.'], 'steal');
-    whisper(s, actor, ['You snatched ', { res: stolen }, ' from ', P(s, victim), '.']);
+    if (named === null) whisper(s, actor, ['You snatched ', { res: stolen }, ' from ', P(s, victim), '.']);
+    else if (found) whisper(s, actor, ['Your Watchman found ', { res: stolen }, ' at ', P(s, victim), "'s."]);
+    else whisper(s, actor, [P(s, victim), ' had no ', { res: named }, ' — your Watchman grabbed ', { res: stolen }, ' instead.']);
     whisper(s, victim, [P(s, actor), ' snatched your ', { res: stolen }, '.']);
   }
 
   s.phase = s.turn.robberReturn ?? 'main';
   s.turn.robberReturn = null;
+  s.turn.robberSource = null;
 }
 
 // ---------------------------------------------------------------------------
@@ -466,6 +479,7 @@ function playDevCard(s, actor, action) {
     case 'watchman': {
       player.knightsPlayed += 1;
       s.turn.robberReturn = s.phase;
+      s.turn.robberSource = 'watchman';
       s.phase = 'robber';
       log(s, [P(s, actor), ' called a Watchman.'], 'card');
       updateLargestArmy(s, actor);

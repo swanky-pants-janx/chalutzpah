@@ -171,6 +171,9 @@ export function createHandler({ store, rng = engine.cryptoRng(), now = () => Dat
 
     start: (userId, { gameId }) => mutate(gameId, userId, (state) => engine.startGame(state, userId, { rng, now: now() })),
 
+    update_settings: (userId, { gameId, settings }) =>
+      mutate(gameId, userId, (state) => engine.updateSettings(state, userId, settings)),
+
     update_profile: (userId, { gameId, name, color }) =>
       mutate(gameId, userId, (state) => engine.updateProfile(state, userId, { name, color })),
 

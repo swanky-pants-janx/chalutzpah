@@ -14,3 +14,16 @@ export const ACHIEVEMENT_TEXT = {
   longestRoad: 'Trailblazer: longest unbroken trail of at least 5 segments (+2 points).',
   largestArmy: 'Night Watch: most Watchmen called, at least 3 (+2 points).',
 };
+
+export const HOUSE_RULES = [
+  {
+    key: 'closeNeighbours',
+    name: 'Close neighbours',
+    text: 'Homesteads may sit just one trail apart.',
+  },
+  {
+    key: 'watchmanChoice',
+    name: 'Choosy Watchman',
+    text: "When you play a Watchman, name a resource. If they have one it's yours — otherwise you grab a random card.",
+  },
+];

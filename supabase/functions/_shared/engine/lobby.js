@@ -37,7 +37,27 @@ export function normalizeSettings(input = {}) {
     ? Math.min(MAX_PLAYERS, Math.max(MIN_PLAYERS, input.maxPlayers))
     : DEFAULT_SETTINGS.maxPlayers;
   const vpTarget = VP_TARGETS.includes(input.vpTarget) ? input.vpTarget : DEFAULT_SETTINGS.vpTarget;
-  return { maxPlayers, vpTarget };
+  return {
+    maxPlayers,
+    vpTarget,
+    closeNeighbours: input.closeNeighbours === true,
+    watchmanChoice: input.watchmanChoice === true,
+  };
+}
+
+/** Host changes the table's settings or house rules while everyone is in the lobby. */
+export function updateSettings(state, userId, patch = {}) {
+  const idx = requireMember(state, userId);
+  requireLobby(state);
+  requireHost(state, idx);
+  if (!patch || typeof patch !== 'object' || Array.isArray(patch)) throw new GameError('BAD_SETTINGS', 'Invalid settings.');
+  const settings = normalizeSettings({ ...state.settings, ...patch });
+  if (settings.maxPlayers < state.players.length) {
+    throw new GameError('TOO_MANY', `There are already ${state.players.length} players at the table.`);
+  }
+  const s = structuredClone(state);
+  s.settings = settings;
+  return s;
 }
 
 function newPlayer({ playerId, userId, name }, color) {

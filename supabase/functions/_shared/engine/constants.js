@@ -56,7 +56,13 @@ export const ACHIEVEMENT_VP = 2;
 export const MIN_PLAYERS = 2;
 export const MAX_PLAYERS = 4;
 export const VP_TARGETS = Object.freeze([8, 10, 12]);
-export const DEFAULT_SETTINGS = Object.freeze({ maxPlayers: 4, vpTarget: 10 });
+export const DEFAULT_SETTINGS = Object.freeze({
+  maxPlayers: 4,
+  vpTarget: 10,
+  // House rules
+  closeNeighbours: false, // homesteads may sit one trail apart
+  watchmanChoice: false, // a Watchman names the resource it takes
+});
 
 export const PLAYER_COLORS = Object.freeze(['pomegranate', 'cobalt', 'almond', 'fig']);
 

@@ -2,13 +2,25 @@
   import { COSTS, DEV_CARD_LABELS } from '$engine';
   import Bundle from '../ui/Bundle.svelte';
   import Modal from '../ui/Modal.svelte';
-  import { ACHIEVEMENT_TEXT, CARD_ORDER, CARD_TEXT } from '../../game/cards.js';
+  import { ACHIEVEMENT_TEXT, CARD_ORDER, CARD_TEXT, HOUSE_RULES } from '../../game/cards.js';
 
-  let { onclose } = $props();
+  let { onclose, settings = null } = $props();
+  const activeRules = $derived(HOUSE_RULES.filter((rule) => settings?.[rule.key]));
 </script>
 
 <Modal title="How to play Chalutzpah" wide {onclose}>
   <div class="rules">
+    {#if activeRules.length}
+      <section class="house">
+        <h3>House rules at this table</h3>
+        <ul>
+          {#each activeRules as rule (rule.key)}
+            <li><b>{rule.name}</b> — {rule.text}</li>
+          {/each}
+        </ul>
+      </section>
+    {/if}
+
     <section>
       <h3>Goal</h3>
       <p>Be the first to reach the target score (10 by default) <em>during your own turn</em>.</p>
@@ -110,6 +122,13 @@
   td:first-child {
     font-weight: 800;
     white-space: nowrap;
+  }
+
+  .house {
+    padding: 16px 20px;
+    border-radius: 25px;
+    background: #fff3e2;
+    border: 1px solid rgba(212, 105, 59, 0.35);
   }
 
   kbd {

@@ -18,6 +18,7 @@ export {
   rerollMap,
   startGame,
   updateProfile,
+  updateSettings,
   validateName,
 } from './lobby.js';
 export { mergeView, privateView, publicView, snapshot } from './views.js';

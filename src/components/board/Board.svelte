@@ -263,6 +263,7 @@
     <polygon
       points={TILE_POINTS[hex]}
       class="target-hex"
+      data-hex={hex}
       role="button"
       tabindex="0"
       aria-label="Send the Jackal to {TERRAIN_LABELS[board.hexes[hex].terrain]}"
@@ -320,6 +321,7 @@
     {@const s = EDGE_SEGMENTS[edge]}
     <g
       class="target-edge"
+      data-edge={edge}
       role="button"
       tabindex="0"
       aria-label="Blaze a trail here"
@@ -335,6 +337,7 @@
     {@const p = V[vertex]}
     <g
       class="target-vertex"
+      data-vertex={vertex}
       class:upgrade={buildings.some((b) => b.v === vertex)}
       role="button"
       tabindex="0"

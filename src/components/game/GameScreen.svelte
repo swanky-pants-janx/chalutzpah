@@ -18,6 +18,7 @@
   import TradeDialog from './TradeDialog.svelte';
   import TurnCard from './TurnCard.svelte';
   import VictimDialog from './VictimDialog.svelte';
+  import { HOUSE_RULES } from '../../game/cards.js';
   import { getControls } from '../../game/controls.js';
   import { play, sound, toggleMute } from '../../lib/sound.svelte.js';
   import { table } from '../../lib/table.svelte.js';
@@ -86,16 +87,31 @@
     await run({ type: 'BUILD_ROAD', edge });
   }
 
+  // House rule "Choosy Watchman": a Watchman names what it's after.
+  const choosyWatchman = $derived(view.settings?.watchmanChoice === true && view.turn?.robberSource === 'watchman');
+
   async function onhex(hex) {
     const victims = robberVictims(view, view.me, hex);
     if (victims.length > 1) dialog = { victims, hex };
-    else await run({ type: 'MOVE_ROBBER', hex, victim: victims[0] ?? null });
+    else if (victims.length === 1) chooseVictim(hex, victims[0]);
+    else await run({ type: 'MOVE_ROBBER', hex, victim: null });
   }
 
-  async function pickVictim(victim) {
+  function chooseVictim(hex, victim) {
+    if (choosyWatchman) dialog = { watchmanAsk: true, hex, victim };
+    else run({ type: 'MOVE_ROBBER', hex, victim });
+  }
+
+  function pickVictim(victim) {
     const { hex } = dialog;
     dialog = null;
-    await run({ type: 'MOVE_ROBBER', hex, victim });
+    chooseVictim(hex, victim);
+  }
+
+  function nameResource([resource]) {
+    const { hex, victim } = dialog;
+    dialog = null;
+    run({ type: 'MOVE_ROBBER', hex, victim, resource });
   }
 
   // ------------------------------------------------------------ cards & trades
@@ -235,6 +251,7 @@
   ]);
 
   const myColor = $derived(colorOf(view.players[view.me]));
+  const houseRules = $derived(HOUSE_RULES.filter((rule) => view.settings?.[rule.key]));
   const modeHint = $derived(
     {
       road: controls?.phase === 'road_building' ? 'Place a free trail' : 'Pick a glowing path for your trail',
@@ -281,6 +298,11 @@
           <Die value={rollShow.dice[0]} rolling size={64} />
           <Die value={rollShow.dice[1]} rolling size={64} tone="red" />
           <span class="roll-text"><small>{rollShow.name} rolled</small>{rollShow.total}</span>
+        </div>
+      {/if}
+      {#if houseRules.length}
+        <div class="house-rules" title={houseRules.map((r) => `${r.name}: ${r.text}`).join('\n')}>
+          House rules: {houseRules.map((r) => r.name).join(' · ')}
         </div>
       {/if}
       <div class="supply" title="Cards left in the supply">
@@ -352,7 +374,17 @@
     onclose={() => (dialog = null)}
   />
 {:else if dialog === 'rules'}
-  <RulesDialog onclose={() => (dialog = null)} />
+  <RulesDialog settings={view.settings} onclose={() => (dialog = null)} />
+{:else if dialog?.watchmanAsk}
+  <PickResourcesDialog
+    title="What is your Watchman after?"
+    text={`Name a resource. If ${view.players[dialog.victim]?.name} has one, it's yours — otherwise you grab a random card.`}
+    count={1}
+    supply={view.bank}
+    {busy}
+    onpick={nameResource}
+    onclose={() => (dialog = null)}
+  />
 {:else if dialog?.victims}
   <VictimDialog {view} victims={dialog.victims} {busy} onpick={pickVictim} onclose={() => (dialog = null)} />
 {/if}
@@ -502,6 +534,18 @@
     font-weight: 700;
     color: var(--text-light-muted);
     margin-bottom: 4px;
+  }
+
+  .house-rules {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+    padding: 6px 14px;
+    border-radius: 25px;
+    background: rgba(243, 192, 96, 0.9);
+    color: #2b2118;
+    font-size: 0.8rem;
+    font-weight: 700;
   }
 
   .supply {

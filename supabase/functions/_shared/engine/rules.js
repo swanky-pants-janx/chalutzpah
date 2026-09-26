@@ -32,9 +32,13 @@ export function roadOwner(s, edge) {
   return owner == null ? null : owner;
 }
 
-/** Empty corner with no building on any adjacent corner (the spacing rule). */
+/**
+ * Empty corner with no building on any adjacent corner (the spacing rule).
+ * House rule "close neighbours": homesteads may sit one trail apart.
+ */
 export function isSettlementSpotOpen(s, vertex) {
   if (buildingAt(s, vertex)) return false;
+  if (s.settings?.closeNeighbours) return true;
   return TOPOLOGY.vertices[vertex].neighbors.every((n) => !buildingAt(s, n));
 }
 

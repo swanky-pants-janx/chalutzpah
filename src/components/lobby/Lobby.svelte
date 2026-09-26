@@ -2,6 +2,7 @@
   import { MAP_NUMBER_MAX, MIN_PLAYERS, NAME_MAX_LENGTH, PLAYER_COLORS as COLOR_IDS } from '$engine';
   import Board from '../board/Board.svelte';
   import RulesDialog from '../game/RulesDialog.svelte';
+  import TableSettings from './TableSettings.svelte';
   import Die from '../ui/Die.svelte';
   import Icon from '../ui/Icon.svelte';
   import Logo from '../ui/Logo.svelte';
@@ -98,6 +99,18 @@
       editingName = false;
     } catch (err) {
       toastError(err);
+    }
+  }
+
+  let savingSettings = $state(false);
+  async function changeSettings(patch) {
+    savingSettings = true;
+    try {
+      await table.send('update_settings', { settings: patch });
+    } catch (err) {
+      toastError(err);
+    } finally {
+      savingSettings = false;
     }
   }
 
@@ -237,8 +250,10 @@
           </li>
         {/each}
       </ul>
-      <p class="rules-line muted">First to <b>{view.settings.vpTarget} points</b> wins · seats are shuffled when the game starts</p>
+      <p class="rules-line muted">Seats are shuffled when the game starts.</p>
     </div>
+
+    <TableSettings {view} {isHost} busy={savingSettings} onchange={changeSettings} />
   </section>
 
   <section class="card map-card">
@@ -298,7 +313,7 @@
 </main>
 
 {#if showRules}
-  <RulesDialog onclose={() => (showRules = false)} />
+  <RulesDialog settings={view.settings} onclose={() => (showRules = false)} />
 {/if}
 
 <style>
