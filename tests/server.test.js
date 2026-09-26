@@ -418,3 +418,52 @@ describe('invite previews', () => {
     expect((await handle(null, { op: 'sync', gameId })).error.code).toBe('UNAUTHORIZED');
   });
 });
+
+describe('abandoned games', () => {
+  async function playing(n = 3) {
+    const env = setup();
+    const { gameId, code } = await hostAndJoin(env.handle, n);
+    await env.handle('host', { op: 'start', gameId });
+    return { ...env, gameId, code };
+  }
+
+  it('are deleted the moment the last player leaves', async () => {
+    const { handle, store, gameId, code } = await playing(3);
+    await handle('guest-1', { op: 'leave', gameId });
+    await handle('guest-2', { op: 'leave', gameId });
+    expect(store.games.has(gameId)).toBe(true); // the host is still there
+    const last = await handle('host', { op: 'leave', gameId });
+    expect(last).toMatchObject({ ok: true, gameId: null, disbanded: true });
+    expect(store.games.has(gameId)).toBe(false);
+    expect((await handle('host', { op: 'join', code, username: 'Hostess' })).error.code).toBe('NOT_FOUND');
+    expect((await handle(null, { op: 'preview', code })).error.code).toBe('NOT_FOUND');
+  });
+
+  it('a player who left can still come back while someone else is playing', async () => {
+    const { handle, gameId, code } = await playing(2);
+    await handle('guest-1', { op: 'leave', gameId });
+    const back = await handle('guest-1', { op: 'join', code, username: 'Guest 1' });
+    expect(back.ok).toBe(true);
+    expect(back.public.players.every((p) => !p.left)).toBe(true);
+  });
+
+  it('an already-abandoned game is disbanded instead of revived', async () => {
+    const { handle, store, gameId, code } = await playing(2);
+    const record = store.games.get(gameId);
+    for (const p of record.state.players) p.left = true; // e.g. left over from before this fix
+    record.version += 1;
+    const res = await handle('host', { op: 'join', code, username: 'Hostess' });
+    expect(res.error.code).toBe('DISBANDED');
+    expect(store.games.has(gameId)).toBe(false);
+  });
+
+  it('finished games are not treated as abandoned', async () => {
+    const { handle, store, gameId } = await playing(2);
+    const record = store.games.get(gameId);
+    record.state.status = 'finished';
+    record.version += 1; // as a real commit would
+    await handle('guest-1', { op: 'leave', gameId });
+    await handle('host', { op: 'leave', gameId });
+    expect(store.games.has(gameId)).toBe(true);
+  });
+});

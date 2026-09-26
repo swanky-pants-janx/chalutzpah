@@ -13,6 +13,7 @@ export { LAYOUTS, LAYOUT_IDS, layoutOf } from './layouts.js';
 export {
   claimHost,
   createGame,
+  isAbandoned,
   joinGame,
   kickPlayer,
   leaveGame,

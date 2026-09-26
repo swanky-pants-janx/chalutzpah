@@ -88,6 +88,11 @@ export function createHandler({ store, rng = engine.cryptoRng(), now = () => Dat
         throw new GameError('NOT_FOUND', 'That game no longer exists.');
       }
       if (!cached) remember(gameId, record);
+      if (engine.isAbandoned(record.state)) {
+        cache.delete(gameId);
+        await store.remove(gameId);
+        throw new GameError('DISBANDED', 'Everyone left that game, so it was disbanded.');
+      }
 
       let next;
       try {
@@ -110,10 +115,11 @@ export function createHandler({ store, rng = engine.cryptoRng(), now = () => Dat
         }
         return respond(record.state, userId, record.version);
       }
-      if (next.players.length === 0) {
+      // An empty lobby, or a game everyone has left, stops existing.
+      if (next.players.length === 0 || engine.isAbandoned(next)) {
         cache.delete(gameId);
         await store.remove(gameId);
-        return { ok: true, gameId: null, version: null, public: null, private: null };
+        return { ok: true, gameId: null, version: null, public: null, private: null, disbanded: true };
       }
       const version = await store.commit(gameId, record.version, engine.snapshot(next));
       if (version != null) {
@@ -233,7 +239,7 @@ export function createHandler({ store, rng = engine.cryptoRng(), now = () => Dat
       if (!CODE_PATTERN.test(clean)) throw new GameError('BAD_CODE', 'Game codes are 5 letters and numbers.');
       const game = await store.findByCode(clean);
       const record = game ? await store.load(game.id) : null;
-      if (!record) throw new GameError('NOT_FOUND', 'No game uses that code.');
+      if (!record || engine.isAbandoned(record.state)) throw new GameError('NOT_FOUND', 'No game uses that code.');
       const s = record.state;
       const host = s.players.find((p) => p.id === s.hostId) ?? s.players[0];
       return {
@@ -256,6 +262,10 @@ export function createHandler({ store, rng = engine.cryptoRng(), now = () => Dat
       const record = await store.load(gameId);
       if (!record || engine.playerIndexByUser(record.state, userId) < 0) {
         throw new GameError('NOT_FOUND', 'That game no longer exists.');
+      }
+      if (engine.isAbandoned(record.state)) {
+        await store.remove(gameId);
+        throw new GameError('DISBANDED', 'Everyone left that game, so it was disbanded.');
       }
       return respond(record.state, userId, record.version);
     },

@@ -174,9 +174,15 @@ export function joinGame(state, { userId, name, playerId, color = null }) {
   return s;
 }
 
+/** An in-progress game that every player has left. The server disbands these. */
+export function isAbandoned(state) {
+  return (state.status === 'setup' || state.status === 'playing') && state.players.every((p) => p.left);
+}
+
 /**
  * Lobby: the seat is freed. Active game: the player is marked away (state is kept
- * so they can rejoin) and their turns are skipped automatically.
+ * so they can rejoin) and their turns are skipped automatically — unless they
+ * were the last one there, in which case the game is abandoned (see isAbandoned).
  */
 export function leaveGame(state, userId, ctx = {}) {
   const idx = requireMember(state, userId);
@@ -192,6 +198,7 @@ export function leaveGame(state, userId, ctx = {}) {
 
   if (s.players[idx].left) return state;
   s.players[idx].left = true;
+  if (isAbandoned(s)) return s; // nobody left to play for: the server disbands it
   log(s, [P(s, idx), ' left the game. Their turns will be skipped until they return.'], 'away');
   if (s.hostId === s.players[idx].id) migrateHost(s);
   const env = makeEnv(s, ctx);

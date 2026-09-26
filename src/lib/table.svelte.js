@@ -80,9 +80,20 @@ class TableSession {
       return false;
     }
     save(LAST_GAME_KEY, gameId);
-    // A returning player who had left the game re-takes their seat.
+    // A returning player who had left the game re-takes their seat — unless
+    // everyone left, in which case the server has disbanded it.
     const me = this.view?.players[this.view.me];
-    if (me?.left) await this.send('join', { code: this.pub.code, username: me.name }).catch(() => {});
+    if (me?.left) {
+      try {
+        await this.send('join', { code: this.pub.code, username: me.name });
+      } catch (err) {
+        if (err?.code === 'DISBANDED' || err?.code === 'NOT_FOUND') {
+          this.#reset();
+          save(LAST_GAME_KEY, null);
+          return false;
+        }
+      }
+    }
     this.#connect();
     return true;
   }
@@ -305,11 +316,13 @@ export const table = new TableSession();
 export async function myOpenGames() {
   const { data, error } = await supabase
     .from('game_members')
-    .select('game_id, games ( code, status, updated_at )')
+    .select('game_id, games ( code, status, updated_at, players:public_state->players )')
     .order('joined_at', { ascending: false })
     .limit(5);
   if (error || !data) return [];
   return data
     .filter((row) => row.games && row.games.status !== 'finished')
+    // an in-progress game everyone has left is being disbanded
+    .filter((row) => row.games.status === 'lobby' || !(row.games.players ?? []).every((p) => p.left))
     .map((row) => ({ gameId: row.game_id, code: row.games.code, status: row.games.status, updatedAt: row.games.updated_at }));
 }

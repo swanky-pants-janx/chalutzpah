@@ -1,11 +1,12 @@
 // Runs the real migration in PGlite (Postgres compiled to WASM) with a minimal
 // stand-in for Supabase's roles and auth.uid(), then checks the security model.
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { PGlite } from '@electric-sql/pglite';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-const MIGRATION = new URL('../supabase/migrations/20260926000000_init.sql', import.meta.url);
+const MIGRATIONS = new URL('../supabase/migrations/', import.meta.url);
+const migrationFiles = readdirSync(MIGRATIONS).filter((f) => f.endsWith('.sql')).sort();
 const U1 = '11111111-1111-4111-8111-111111111111';
 const U2 = '22222222-2222-4222-8222-222222222222';
 const U3 = '33333333-3333-4333-8333-333333333333';
@@ -67,7 +68,7 @@ beforeAll(async () => {
     alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
     create publication supabase_realtime;
   `);
-  await db.exec(readFileSync(MIGRATION, 'utf8'));
+  for (const file of migrationFiles) await db.exec(readFileSync(new URL(file, MIGRATIONS), 'utf8'));
   await db.exec(`insert into auth.users values ('${U1}'), ('${U2}'), ('${U3}')`);
   const created = await as('service_role', null, 'select public.create_game($1,$2,$3,$4,$5,$6) v', [
     G,
@@ -166,5 +167,29 @@ describe('database: membership and cleanup', () => {
       'select (select count(*) from public.games)::int g, (select count(*) from public.game_secrets)::int s, (select count(*) from public.game_members)::int m',
     );
     expect(rows[0]).toEqual({ g: 0, s: 0, m: 0 });
+  });
+});
+
+describe('database: abandoned games', () => {
+  const insertGame = async (id, code, players) => {
+    await as('service_role', null, 'select public.create_game($1,$2,$3,$4,$5,$6)', [
+      id,
+      code,
+      {},
+      { players },
+      JSON.stringify([]),
+      JSON.stringify([{ user_id: U1, player_id: 'p1' }]),
+    ]);
+    await run("update public.games set status = 'playing' where id = $1", [id]);
+  };
+
+  it('cleanup disbands in-progress games everyone has left, and keeps ones with someone seated', async () => {
+    const empty = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    const busy = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+    await insertGame(empty, 'EMPTY', [{ id: 'p1', left: true }, { id: 'p2', left: true }]);
+    await insertGame(busy, 'BUSYY', [{ id: 'p1', left: true }, { id: 'p2', left: false }]);
+    expect((await as('service_role', null, 'select public.cleanup_stale_games() n')).rows[0].n).toBe(1);
+    const { rows } = await run('select id from public.games order by id');
+    expect(rows.map((r) => r.id)).toEqual([busy]);
   });
 });

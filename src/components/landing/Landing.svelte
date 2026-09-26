@@ -12,7 +12,7 @@
   import JoinDialog from './JoinDialog.svelte';
   import { play, sound, toggleMute } from '../../lib/sound.svelte.js';
   import { myOpenGames, table } from '../../lib/table.svelte.js';
-  import { toastError } from '../../lib/toasts.svelte.js';
+  import { toast, toastError } from '../../lib/toasts.svelte.js';
 
   // Invite links look like /join/X7K4P (older ones: /?join=X7K4P).
   const inviteCode = new URLSearchParams(location.search).get('join') ?? location.pathname.match(/^\/join\/([A-Za-z0-9]{5})/)?.[1] ?? '';
@@ -40,7 +40,10 @@
 
   async function resume(gameId) {
     try {
-      if (!(await table.resume(gameId))) openGames = openGames.filter((g) => g.gameId !== gameId);
+      if (!(await table.resume(gameId))) {
+        openGames = openGames.filter((g) => g.gameId !== gameId);
+        toast('That table no longer exists — everyone had left.', { kind: 'error' });
+      }
     } catch (err) {
       toastError(err);
     }
