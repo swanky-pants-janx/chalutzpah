@@ -1,6 +1,8 @@
 <script>
-  import { VP_TARGETS } from '$engine';
+  import { TURN_TIMERS, VP_TARGETS } from '$engine';
   import { HOUSE_RULES } from '../../game/cards.js';
+
+  const timerLabel = (s) => (s === 0 ? 'Off' : s < 120 ? `${s}s` : `${s / 60} min`);
 
   /** Lobby settings: editable by the host, read-only for everyone else. */
   let { view, isHost, busy = false, onchange } = $props();
@@ -35,6 +37,17 @@
       {#each VP_TARGETS as n (n)}
         <button type="button" aria-pressed={settings.vpTarget === n} disabled={!isHost || busy} onclick={() => onchange({ vpTarget: n })}>
           {n}
+        </button>
+      {/each}
+    </div>
+  </div>
+
+  <div class="row">
+    <span class="label">Turn timer</span>
+    <div class="segmented" role="group" aria-label="Turn timer">
+      {#each TURN_TIMERS as s (s)}
+        <button type="button" aria-pressed={settings.turnTimer === s} disabled={!isHost || busy} onclick={() => onchange({ turnTimer: s })}>
+          {timerLabel(s)}
         </button>
       {/each}
     </div>

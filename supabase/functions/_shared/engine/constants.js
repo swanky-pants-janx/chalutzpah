@@ -62,7 +62,15 @@ export const DEFAULT_SETTINGS = Object.freeze({
   // House rules
   closeNeighbours: false, // homesteads may sit one trail apart
   watchmanChoice: false, // a Watchman names the resource it takes
+  turnTimer: 0, // seconds per turn; 0 = no timer
 });
+
+/** Turn timer choices in seconds (0 = off). */
+export const TURN_TIMERS = Object.freeze([0, 60, 90, 120, 180]);
+/** When a 7 forces discards, everyone gets at least this long. */
+export const DISCARD_GRACE_MS = 20_000;
+/** After the discards, the roller gets at least this long to move the Jackal. */
+export const ROBBER_GRACE_MS = 15_000;
 
 export const PLAYER_COLORS = Object.freeze(['pomegranate', 'cobalt', 'almond', 'fig']);
 

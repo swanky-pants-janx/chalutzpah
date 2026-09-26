@@ -12,9 +12,10 @@ import {
   PIECE_LIMITS,
   PLAYER_COLORS,
   RESOURCES,
+  TURN_TIMERS,
   VP_TARGETS,
 } from './constants.js';
-import { checkVictory, makeEnv, resolveAbsent } from './actions.js';
+import { checkVictory, makeEnv, resolveAbsent, startClock } from './actions.js';
 import { generateBoard } from './board.js';
 import { GameError } from './errors.js';
 import { emptyHand } from './hand.js';
@@ -42,6 +43,7 @@ export function normalizeSettings(input = {}) {
     vpTarget,
     closeNeighbours: input.closeNeighbours === true,
     watchmanChoice: input.watchmanChoice === true,
+    turnTimer: TURN_TIMERS.includes(input.turnTimer) ? input.turnTimer : 0,
   };
 }
 
@@ -294,6 +296,7 @@ export function startGame(state, userId, { rng, now }) {
   };
   s.roadLengths = s.players.map(() => 0);
   s.startedAt = now;
+  startClock(s, { now });
   log(s, ['The settlers arrive! ', P(s, 0), ' chooses the first homestead.'], 'turn');
   return s;
 }

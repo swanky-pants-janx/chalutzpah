@@ -1,5 +1,6 @@
 <script>
   import Die from '../ui/Die.svelte';
+  import TurnClock from './TurnClock.svelte';
   import Icon from '../ui/Icon.svelte';
   import { describeTurn } from '../../game/controls.js';
   import { colorOf } from '../../lib/theme.js';
@@ -21,6 +22,10 @@
   </div>
   <h2>{desc.title}</h2>
   <p class="hint">{desc.hint}</p>
+
+  {#if view.turn?.deadline && controls.inGame}
+    <TurnClock deadline={view.turn.deadline} seconds={view.settings.turnTimer} mine={controls.myTurn || controls.mustDiscard > 0} />
+  {/if}
 
   <div class="dice-row">
     <div class="dice" class:stale={!view.lastRoll}>

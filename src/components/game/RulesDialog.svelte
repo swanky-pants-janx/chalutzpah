@@ -10,10 +10,16 @@
 
 <Modal title="How to play Chalutzpah" wide {onclose}>
   <div class="rules">
-    {#if activeRules.length}
+    {#if activeRules.length || settings?.turnTimer}
       <section class="house">
         <h3>House rules at this table</h3>
         <ul>
+          {#if settings?.turnTimer}
+            <li>
+              <b>Turn timer</b> — {settings.turnTimer} seconds per turn. When it runs out, the turn is finished for you (roll,
+              discards, the Jackal) and passes on. Nothing is built or traded for you.
+            </li>
+          {/if}
           {#each activeRules as rule (rule.key)}
             <li><b>{rule.name}</b> — {rule.text}</li>
           {/each}

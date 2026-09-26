@@ -36,6 +36,7 @@ class TableSession {
   view = $derived(mergeView(this.optimistic?.pub ?? this.pub, this.optimistic?.priv ?? this.priv));
 
   #queue = []; // [{ id, gameId, action, predicted, resolve, reject }]
+  #clockOffset = 0; // server clock minus ours, from the latest response
   #sending = false;
   #channel = null;
   #heartbeat = null;
@@ -55,6 +56,7 @@ class TableSession {
   /** Enter a table from a create/join response. */
   async enter(response) {
     this.#reset();
+    if (typeof response.serverTime === 'number') this.#clockOffset = response.serverTime - Date.now();
     this.gameId = response.gameId;
     this.applyResponse(response);
     save(LAST_GAME_KEY, response.gameId);
@@ -92,8 +94,20 @@ class TableSession {
 
   /** Call the server for this table and apply the fresh state it returns. */
   async send(op, payload = {}) {
-    const res = await callGame(op, { gameId: this.gameId, ...payload });
+    const res = await this.#call(op, { gameId: this.gameId, ...payload });
     if (res.gameId === this.gameId) this.applyResponse(res);
+    return res;
+  }
+
+  /** The server's current time (for turn timers), estimated from recent responses. */
+  serverNow() {
+    return Date.now() + this.#clockOffset;
+  }
+
+  async #call(op, payload) {
+    const sent = Date.now();
+    const res = await callGame(op, payload);
+    if (typeof res.serverTime === 'number') this.#clockOffset = res.serverTime - (sent + Date.now()) / 2;
     return res;
   }
 
@@ -121,7 +135,7 @@ class TableSession {
         const entry = this.#queue[0];
         let res;
         try {
-          res = await callGame('action', { gameId: entry.gameId, action: { ...entry.action, id: entry.id } });
+          res = await this.#call('action', { gameId: entry.gameId, action: { ...entry.action, id: entry.id } });
         } catch (err) {
           if (this.#queue[0] !== entry) continue; // table was left meanwhile
           const dropped = this.#queue.splice(0);

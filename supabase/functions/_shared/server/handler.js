@@ -53,6 +53,7 @@ export function createHandler({ store, rng = engine.cryptoRng(), now = () => Dat
     const idx = engine.playerIndexByUser(state, userId);
     return {
       ok: true,
+      serverTime: now(),
       gameId: state.id,
       version,
       public: engine.publicView(state),

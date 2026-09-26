@@ -163,6 +163,22 @@
       .filter((p) => offlineSince[p.id] && now - offlineSince[p.id] > AWAY_AFTER_MS);
   });
 
+  // Turn timer: whoever's turn it is calls time at zero; everyone else backs
+  // them up a few seconds later. The server checks its own clock.
+  let lastTimeout = { deadline: null, at: 0 };
+  $effect(() => {
+    const timer = setInterval(() => {
+      const deadline = view?.turn?.deadline;
+      if (!deadline || !controls?.inGame) return;
+      const blocking = controls.myTurn || controls.mustDiscard > 0;
+      if (table.serverNow() - deadline < (blocking ? 300 : 3000)) return;
+      if (lastTimeout.deadline === deadline && Date.now() - lastTimeout.at < 2500) return;
+      lastTimeout = { deadline, at: Date.now() };
+      table.act({ type: 'TIMEOUT' }).done.catch(() => {});
+    }, 500);
+    return () => clearInterval(timer);
+  });
+
   async function skipAway() {
     if (await run({ type: 'FORCE_SKIP' })) toast('Skipped ahead past the absent player.');
   }

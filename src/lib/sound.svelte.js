@@ -64,6 +64,7 @@ function noise(ac, { start = 0, dur = 0.06, gain = 0.25, freq = 1800 }) {
 
 const EFFECTS = {
   click: (ac) => tone(ac, { freq: 520, dur: 0.06, gain: 0.08, type: 'triangle' }),
+  tick: (ac) => tone(ac, { freq: 1200, dur: 0.05, gain: 0.06, type: 'square' }),
   dice: (ac) => {
     for (let i = 0; i < 7; i++) noise(ac, { start: i * 0.055 + Math.random() * 0.02, dur: 0.05, gain: 0.35, freq: 1400 + Math.random() * 1600 });
   },

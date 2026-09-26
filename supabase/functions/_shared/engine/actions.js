@@ -14,6 +14,8 @@
 import {
   COSTS,
   DEV_CARD_TYPES,
+  DISCARD_GRACE_MS,
+  ROBBER_GRACE_MS,
   LARGEST_ARMY_MIN,
   LONGEST_ROAD_MIN,
   MAX_OPEN_TRADES,
@@ -134,6 +136,7 @@ const HANDLERS = {
   DECLINE_TRADE: declineTrade,
   END_TURN: endTurn,
   FORCE_SKIP: forceSkip,
+  TIMEOUT: timeout,
 };
 
 // ---------------------------------------------------------------------------
@@ -234,7 +237,7 @@ function buildRoad(s, actor, { edge }, env) {
     }
     placeRoad(s, actor, e);
     log(s, [P(s, actor), ' blazed a Trail.'], 'build');
-    advanceSetup(s);
+    advanceSetup(s, env);
     return;
   }
 
@@ -265,10 +268,11 @@ function placeRoad(s, idx, edge) {
   s.players[idx].piecesLeft.road -= 1;
 }
 
-function advanceSetup(s) {
+function advanceSetup(s, env) {
   const n = s.players.length;
   s.turn.setupIndex += 1;
   s.turn.setupVertex = null;
+  startClock(s, env);
   if (s.turn.setupIndex >= 2 * n) {
     s.status = 'playing';
     s.phase = 'roll';
@@ -323,6 +327,7 @@ function rollDice(s, actor, _action, env) {
     log(s, ['The Jackal prowls! Nothing is gathered.'], 'jackal');
     if (Object.keys(pending).length > 0) {
       s.phase = 'discard';
+      extendClock(s, env, DISCARD_GRACE_MS);
       for (const i of Object.keys(pending)) {
         log(s, [P(s, Number(i)), ` must discard ${pending[i]} cards.`], 'discard');
       }
@@ -382,7 +387,7 @@ export function produce(s, total) {
   if (!anyone) log(s, ['Nobody gathered anything.'], 'info');
 }
 
-function discard(s, actor, { resources }) {
+function discard(s, actor, { resources }, env) {
   if (s.phase !== 'discard') throw new GameError('WRONG_PHASE', 'Nobody needs to discard right now.');
   const need = s.pendingDiscards[actor];
   if (!need) throw new GameError('NO_DISCARD', "You don't need to discard.");
@@ -393,7 +398,10 @@ function discard(s, actor, { resources }) {
   transfer(player.resources, s.bank, bundle);
   delete s.pendingDiscards[actor];
   log(s, [P(s, actor), ' discarded ', B(bundle)], 'discard');
-  if (Object.keys(s.pendingDiscards).length === 0) s.phase = 'robber';
+  if (Object.keys(s.pendingDiscards).length === 0) {
+    s.phase = 'robber';
+    if (env) extendClock(s, env, ROBBER_GRACE_MS);
+  }
 }
 
 function moveRobber(s, actor, { hex, victim = null, resource = null }, env) {
@@ -631,8 +639,66 @@ function passTurn(s, env) {
     robberReturn: null,
   };
   s.phase = 'roll';
+  startClock(s, env);
   log(s, [P(s, s.turn.current), "'s turn."], 'turn');
   checkVictory(s, env);
+}
+
+// ---------------------------------------------------------------------------
+// Turn timer
+// ---------------------------------------------------------------------------
+
+/** Start the clock for a new turn (or setup placement) when the table uses a timer. */
+export function startClock(s, env) {
+  const seconds = s.settings?.turnTimer ?? 0;
+  s.turn.deadline = seconds > 0 ? env.now + seconds * 1000 : null;
+}
+
+function extendClock(s, env, minMs) {
+  if (s.turn.deadline != null) s.turn.deadline = Math.max(s.turn.deadline, env.now + minMs);
+}
+
+const turnMark = (s) => `${s.status}:${s.status === 'setup' ? s.turn.setupIndex : s.turn.number}`;
+
+/**
+ * Anyone may call time once the server's clock passes the deadline. The rest
+ * of the turn is played out minimally — roll, discard, move the Jackal — and
+ * the turn passes. Nothing is ever built or traded on a player's behalf.
+ */
+function timeout(s, actor, _action, env) {
+  if (s.turn?.deadline == null) throw new GameError('NO_TIMER', 'This table has no turn timer.');
+  if (env.now < s.turn.deadline) throw new GameError('NOT_YET', 'There is still time on the clock.');
+  const who = s.turn.current;
+  const mark = turnMark(s);
+  log(s, ["Time's up for ", P(s, who), '!'], 'away');
+  for (let guard = 0; guard < 40; guard++) {
+    if (s.status !== 'setup' && s.status !== 'playing') return;
+    if (s.phase === 'discard') {
+      for (const i of Object.keys(s.pendingDiscards).map(Number)) autoDiscard(s, i, env);
+      continue;
+    }
+    if (turnMark(s) !== mark) return;
+    switch (s.phase) {
+      case 'setup_settlement':
+        buildSettlement(s, who, { vertex: pick(env.rng, legalSettlementVertices(s, who, { setup: true })) }, env);
+        break;
+      case 'setup_road':
+        buildRoad(s, who, { edge: pick(env.rng, legalRoadEdges(s, who, { fromVertex: s.turn.setupVertex })) }, env);
+        break;
+      case 'roll':
+        rollDice(s, who, {}, env);
+        break;
+      case 'robber':
+        autoMoveRobber(s, who, env);
+        break;
+      case 'main':
+      case 'road_building':
+        passTurn(s, env);
+        break;
+      default:
+        return;
+    }
+  }
 }
 
 /** Someone may claim victory only on their own turn. */
@@ -773,7 +839,7 @@ function autoDiscard(s, idx, env) {
     bundle[cards[j]] += 1;
     cards.splice(j, 1);
   }
-  discard(s, idx, { resources: bundle });
+  discard(s, idx, { resources: bundle }, env);
 }
 
 function autoMoveRobber(s, idx, env) {
