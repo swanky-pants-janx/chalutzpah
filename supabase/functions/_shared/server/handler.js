@@ -132,7 +132,7 @@ export function createHandler({ store, rng = engine.cryptoRng(), now = () => Dat
   }
 
   const ops = {
-    async create(userId, { username, settings }) {
+    async create(userId, { username, settings, color }) {
       const name = engine.validateName(username);
       if (store.cleanup) await store.cleanup().catch(() => {});
       for (let attempt = 0; attempt < 8; attempt++) {
@@ -143,7 +143,7 @@ export function createHandler({ store, rng = engine.cryptoRng(), now = () => Dat
           code,
           settings: settings ?? {},
           seed: engine.randomMapNumber(rng),
-          host: { playerId: makePlayerId(rng), userId, name },
+          host: { playerId: makePlayerId(rng), userId, name, color },
           now: now(),
         });
         const version = await store.create(gameId, code, engine.snapshot(state));
@@ -152,13 +152,13 @@ export function createHandler({ store, rng = engine.cryptoRng(), now = () => Dat
       throw new GameError('TRY_AGAIN', 'Could not reserve a game code. Please try again.');
     },
 
-    async join(userId, { code, username }) {
+    async join(userId, { code, username, color }) {
       const clean = normalizeCode(code);
       if (!CODE_PATTERN.test(clean)) throw new GameError('BAD_CODE', 'Game codes are 5 letters and numbers.');
       const game = await store.findByCode(clean);
       if (!game) throw new GameError('NOT_FOUND', 'No game uses that code.');
       return mutate(game.id, userId, (state) =>
-        engine.joinGame(state, { userId, name: username, playerId: makePlayerId(rng) }),
+        engine.joinGame(state, { userId, name: username, playerId: makePlayerId(rng), color }),
       );
     },
 
@@ -196,6 +196,31 @@ export function createHandler({ store, rng = engine.cryptoRng(), now = () => Dat
         },
         { duplicateOk: true },
       ),
+
+    /** Start (or join) the rematch of a finished game: same settings, same names and colours. */
+    async rematch(userId, { gameId }) {
+      if (typeof gameId !== 'string' || !UUID_PATTERN.test(gameId)) throw new GameError('BAD_REQUEST', 'Missing game id.');
+      const record = await store.load(gameId);
+      const idx = record ? engine.playerIndexByUser(record.state, userId) : -1;
+      if (idx < 0) throw new GameError('NOT_FOUND', 'That game no longer exists.');
+      const old = record.state;
+      if (old.status !== 'finished') throw new GameError('NOT_FINISHED', 'Finish this game first.');
+      const me = old.players[idx];
+      const follow = (pointer) => ops.join(userId, { code: pointer.code, username: me.name, color: me.color });
+
+      const existing = old.rematch;
+      if (existing && (await store.load(existing.gameId))) return follow(existing);
+
+      const created = await ops.create(userId, { username: me.name, settings: old.settings, color: me.color });
+      const linked = await mutate(gameId, userId, (state) =>
+        engine.setRematch(state, userId, { gameId: created.gameId, code: created.public.code }, { replacing: existing?.gameId ?? null }),
+      );
+      const pointer = linked.public.rematch;
+      if (pointer.gameId === created.gameId) return created;
+      // Someone else opened the rematch at the same moment: use theirs.
+      await store.remove(created.gameId);
+      return follow(pointer);
+    },
 
     async sync(userId, { gameId }) {
       if (typeof gameId !== 'string' || !UUID_PATTERN.test(gameId)) throw new GameError('BAD_REQUEST', 'Missing game id.');

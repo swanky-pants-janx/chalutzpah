@@ -3,7 +3,8 @@
   import Modal from '../ui/Modal.svelte';
   import { colorOf, inkOf } from '../../lib/theme.js';
 
-  let { view, onclose, onhome } = $props();
+  let { view, onclose, onhome, onrematch, rematching = false } = $props();
+  const rematchBy = $derived(view.rematch ? view.players.find((p) => p.id === view.rematch.by) : null);
 
   const winner = $derived(view.players[view.winner]);
   const standings = $derived(
@@ -39,9 +40,15 @@
     {/each}
   </ol>
 
+  <p class="map muted">This island was <b>Map No. {view.board.seed}</b> — load it again in any lobby.</p>
+
   <div class="actions">
     <button class="btn btn--light btn--tight" onclick={onclose}>Look at the board</button>
-    <button class="btn btn--tight" onclick={onhome}>Back to home</button>
+    <button class="btn btn--light btn--tight" onclick={onhome}>Back to home</button>
+    <button class="btn btn--tight" disabled={rematching} onclick={onrematch}>
+      <Icon name="dice" size={20} />
+      {#if rematching}Setting up…{:else if rematchBy}Join {rematchBy.id === view.players[view.me]?.id ? 'your' : `${rematchBy.name}'s`} rematch{:else}Rematch{/if}
+    </button>
   </div>
 </Modal>
 
@@ -128,6 +135,10 @@
   .points {
     font-size: 1.6rem;
     font-weight: 900;
+  }
+
+  .map {
+    font-size: 0.9rem;
   }
 
   .actions {

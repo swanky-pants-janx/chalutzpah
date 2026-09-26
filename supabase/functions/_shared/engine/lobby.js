@@ -74,8 +74,9 @@ function newPlayer({ playerId, userId, name }, color) {
   };
 }
 
-function freeColor(s) {
+function freeColor(s, preferred = null) {
   const taken = new Set(s.players.map((p) => p.color));
+  if (PLAYER_COLORS.includes(preferred) && !taken.has(preferred)) return preferred;
   return PLAYER_COLORS.find((c) => !taken.has(c)) ?? PLAYER_COLORS[0];
 }
 
@@ -127,7 +128,7 @@ export function createGame({ gameId, code, settings, seed, host, now }) {
     startedAt: null,
     finishedAt: null,
   };
-  s.players.push(newPlayer({ ...host, name: validateName(host.name) }, PLAYER_COLORS[0]));
+  s.players.push(newPlayer({ ...host, name: validateName(host.name) }, freeColor(s, host.color)));
   log(s, [P(s, 0), ' set up a new table.'], 'lobby');
   return s;
 }
@@ -136,7 +137,7 @@ export function createGame({ gameId, code, settings, seed, host, now }) {
  * Seat a new player, or reconnect a returning one (same userId).
  * Returning players keep their seat, hand and buildings.
  */
-export function joinGame(state, { userId, name, playerId }) {
+export function joinGame(state, { userId, name, playerId, color = null }) {
   const existing = playerIndexByUser(state, userId);
   if (existing >= 0) {
     if (!state.players[existing].left) return state;
@@ -154,7 +155,7 @@ export function joinGame(state, { userId, name, playerId }) {
   }
 
   const s = structuredClone(state);
-  s.players.push(newPlayer({ playerId, userId, name: clean }, freeColor(s)));
+  s.players.push(newPlayer({ playerId, userId, name: clean }, freeColor(s, color)));
   log(s, [P(s, s.players.length - 1), ' joined the table.'], 'lobby');
   return s;
 }
@@ -203,6 +204,20 @@ export function claimHost(state, userId, { hostIdle = false } = {}) {
   const s = structuredClone(state);
   s.hostId = s.players[idx].id;
   log(s, [P(s, idx), ' took over as host.'], 'lobby');
+  return s;
+}
+
+/**
+ * Point a finished game at its rematch lobby so everyone can follow. The first
+ * pointer wins; it's only replaced when the lobby it names no longer exists.
+ */
+export function setRematch(state, userId, { gameId, code }, { replacing = null } = {}) {
+  const idx = requireMember(state, userId);
+  if (state.status !== 'finished') throw new GameError('NOT_FINISHED', 'Finish this game first.');
+  if (state.rematch && state.rematch.gameId !== replacing) return state;
+  const s = structuredClone(state);
+  s.rematch = { gameId, code, by: s.players[idx].id };
+  log(s, [P(s, idx), ` wants a rematch! Table ${code} is open.`], 'lobby');
   return s;
 }
 

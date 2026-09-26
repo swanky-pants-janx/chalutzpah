@@ -16,6 +16,7 @@ export {
   leaveGame,
   normalizeSettings,
   rerollMap,
+  setRematch,
   startGame,
   updateProfile,
   updateSettings,

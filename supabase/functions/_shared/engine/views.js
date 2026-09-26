@@ -31,6 +31,7 @@ export function publicView(s) {
     achievements: s.achievements,
     roadLengths: s.roadLengths,
     winner: s.winner,
+    rematch: s.rematch ?? null,
     log: s.log,
     createdAt: s.createdAt,
     startedAt: s.startedAt,

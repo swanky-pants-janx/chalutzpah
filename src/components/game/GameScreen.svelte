@@ -20,6 +20,7 @@
   import VictimDialog from './VictimDialog.svelte';
   import { HOUSE_RULES } from '../../game/cards.js';
   import { getControls } from '../../game/controls.js';
+  import { callGame } from '../../lib/api.js';
   import { play, sound, toggleMute } from '../../lib/sound.svelte.js';
   import { table } from '../../lib/table.svelte.js';
   import { colorOf } from '../../lib/theme.js';
@@ -234,6 +235,29 @@
     else if (key === 'e' && controls?.canEndTurn) run({ type: 'END_TURN' });
   }
 
+  // Rematch: same settings, same names and colours, fresh island.
+  let rematching = $state(false);
+  async function rematch() {
+    rematching = true;
+    try {
+      const res = await callGame('rematch', { gameId: table.gameId });
+      await table.enter(res);
+    } catch (err) {
+      toastError(err);
+      rematching = false;
+    }
+  }
+
+  let knownRematch = untrack(() => view.rematch?.gameId ?? null);
+  $effect(() => {
+    const pointer = view.rematch;
+    if (!pointer || pointer.gameId === knownRematch) return;
+    knownRematch = pointer.gameId;
+    const by = view.players.find((p) => p.id === pointer.by);
+    if (by && by.id !== view.players[view.me]?.id) toast(`${by.name} started a rematch — join from the results.`, { kind: 'success' });
+    gameOverOpen = true;
+  });
+
   async function leave() {
     try {
       if (view.status === 'finished') table.close();
@@ -246,7 +270,12 @@
   const menuItems = $derived([
     { label: 'How to play', icon: 'book', onclick: () => (dialog = 'rules') },
     { label: sound.muted ? 'Sound: off' : 'Sound: on', icon: sound.muted ? 'mute' : 'sound', onclick: toggleMute },
-    ...(view.status === 'finished' ? [{ label: 'Final scores', icon: 'trophy', onclick: () => (gameOverOpen = true) }] : []),
+    ...(view.status === 'finished'
+      ? [
+          { label: 'Final scores', icon: 'trophy', onclick: () => (gameOverOpen = true) },
+          { label: view.rematch ? 'Join the rematch' : 'Rematch', icon: 'dice', onclick: rematch },
+        ]
+      : []),
     { label: view.status === 'finished' ? 'Back to home' : 'Leave game', icon: 'exit', onclick: leave, danger: true },
   ]);
 
@@ -390,7 +419,7 @@
 {/if}
 
 {#if view.status === 'finished' && gameOverOpen}
-  <GameOverDialog {view} onclose={() => (gameOverOpen = false)} onhome={() => table.close()} />
+  <GameOverDialog {view} {rematching} onrematch={rematch} onclose={() => (gameOverOpen = false)} onhome={() => table.close()} />
 {/if}
 
 <style>

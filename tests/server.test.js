@@ -341,3 +341,60 @@ describe('map numbers', () => {
     expect((await handle('guest-1', { op: 'reroll_map', gameId: created.gameId, mapNumber: 7 })).error.code).toBe('NOT_HOST');
   });
 });
+
+describe('rematch', () => {
+  async function finishedGame(n = 3) {
+    const env = setup();
+    const { gameId } = await hostAndJoin(env.handle, n);
+    await env.handle('host', { op: 'update_settings', gameId, settings: { closeNeighbours: true, vpTarget: 8 } });
+    await env.handle('host', { op: 'start', gameId });
+    return { ...env, gameId, finish: () => (env.store.games.get(gameId).state.status = 'finished') };
+  }
+
+  it('only works once the game is over', async () => {
+    const { handle, gameId } = await finishedGame();
+    expect((await handle('guest-1', { op: 'rematch', gameId })).error.code).toBe('NOT_FINISHED');
+  });
+
+  it('opens one new lobby with the same settings, names and colours for everyone', async () => {
+    const { handle, store, gameId, finish } = await finishedGame();
+    finish();
+    const old = store.games.get(gameId).state;
+    const colorOf = (user) => old.players.find((p) => p.userId === user).color;
+
+    const first = await handle('guest-1', { op: 'rematch', gameId });
+    expect(first.ok).toBe(true);
+    expect(first.gameId).not.toBe(gameId);
+    expect(first.public.status).toBe('lobby');
+    expect(first.public.settings).toMatchObject({ closeNeighbours: true, vpTarget: 8 });
+    expect(first.public.players[0]).toMatchObject({ name: 'Guest 1', color: colorOf('guest-1') });
+    expect(store.games.get(gameId).state.rematch.gameId).toBe(first.gameId);
+
+    const second = await handle('host', { op: 'rematch', gameId });
+    expect(second.gameId).toBe(first.gameId);
+    const host = second.public.players.find((p) => p.name === 'Hostess');
+    expect(host.color).toBe(colorOf('host'));
+    expect(second.public.hostId).toBe(first.public.hostId);
+  });
+
+  it('two players pressing rematch at once end up at the same table', async () => {
+    const { handle, store, gameId, finish } = await finishedGame();
+    finish();
+    const [a, b] = await Promise.all([handle('host', { op: 'rematch', gameId }), handle('guest-2', { op: 'rematch', gameId })]);
+    expect(a.gameId).toBe(b.gameId);
+    const lobbies = [...store.games.values()].filter((g) => g.state.status === 'lobby');
+    expect(lobbies).toHaveLength(1);
+    expect(lobbies[0].state.players).toHaveLength(2);
+  });
+
+  it('replaces a rematch lobby that has since disappeared', async () => {
+    const { handle, store, gameId, finish } = await finishedGame();
+    finish();
+    const first = await handle('host', { op: 'rematch', gameId });
+    await handle('host', { op: 'leave', gameId: first.gameId }); // empty lobby is deleted
+    const again = await handle('guest-1', { op: 'rematch', gameId });
+    expect(again.ok).toBe(true);
+    expect(again.gameId).not.toBe(first.gameId);
+    expect(store.games.get(gameId).state.rematch.gameId).toBe(again.gameId);
+  });
+});
