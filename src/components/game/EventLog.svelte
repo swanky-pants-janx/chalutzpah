@@ -86,6 +86,13 @@
     font-weight: 700;
   }
 
+  .entry--event {
+    margin-top: 6px;
+    padding: 8px 12px;
+    background: linear-gradient(90deg, rgba(217, 138, 43, 0.28), rgba(217, 138, 43, 0.06));
+    font-weight: 700;
+  }
+
   .entry--away {
     color: var(--text-muted);
     font-style: italic;

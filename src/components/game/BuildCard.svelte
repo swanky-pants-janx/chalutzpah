@@ -1,5 +1,5 @@
 <script>
-  import { COSTS, PIECE_LABELS } from '$engine';
+  import { PIECE_LABELS } from '$engine';
   import Bundle from '../ui/Bundle.svelte';
   import Icon from '../ui/Icon.svelte';
 
@@ -50,7 +50,7 @@
           {PIECE_LABELS[item.key]}
           {#if left !== null}<small>{left} left</small>{/if}
         </span>
-        <span class="cost"><Bundle bundle={COSTS[item.key]} size={15} /></span>
+        <span class="cost"><Bundle bundle={controls.costs[item.key]} size={15} /></span>
       </button>
     {/each}
   </div>

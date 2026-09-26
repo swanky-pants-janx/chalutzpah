@@ -41,12 +41,12 @@ function shape(pub, priv, me) {
 
 const newParts = (log, afterSeq) => log.filter((e) => e.seq > afterSeq).map((e) => e.parts);
 
-async function checkGame(seed, players) {
+async function checkGame(seed, players, settings = {}) {
   const rng = mulberry32(seed);
   const store = createMemoryStore();
   const handle = createHandler({ store, rng: mulberry32(seed * 31 + 7), now: () => 0 });
   const users = Array.from({ length: players }, (_, i) => `bot-${i}`);
-  const created = await handle(users[0], { op: 'create', username: 'Bot 0' });
+  const created = await handle(users[0], { op: 'create', username: 'Bot 0', settings });
   for (let i = 1; i < players; i++) await handle(users[i], { op: 'join', code: created.public.code, username: `Bot ${i}` });
   await handle(users[0], { op: 'start', gameId: created.gameId });
   const gameId = created.gameId;
@@ -111,13 +111,14 @@ async function checkGame(seed, players) {
 describe('optimistic move prediction', () => {
   it('matches the server on every predictable move across full games', async () => {
     const totals = {};
-    for (const [seed, players] of [
+    for (const [seed, players, settings] of [
       [11, 4],
       [12, 3],
       [13, 2],
       [14, 4],
+      [15, 4, { chaos: true, closeNeighbours: true, watchmanChoice: true }],
     ]) {
-      const counts = await checkGame(seed, players);
+      const counts = await checkGame(seed, players, settings);
       totals.games = (totals.games ?? 0) + 1;
       for (const [k, n] of Object.entries(counts)) totals[k] = (totals[k] ?? 0) + n;
     }

@@ -103,7 +103,12 @@ function sidePanel(preview, code) {
         ),
       ),
     ),
-    el({ fontSize: 22, color: 'rgba(247,239,220,0.6)' }, `First to ${settings.vpTarget} · Map No. ${mapNumber}${settings.turnTimer ? ` · ${settings.turnTimer}s turns` : ''}`),
+    el(
+      { fontSize: 22, color: 'rgba(247,239,220,0.6)' },
+      [`First to ${settings.vpTarget}`, `Map No. ${mapNumber}`, settings.chaos && 'Chaos mode', settings.turnTimer && `${settings.turnTimer}s turns`]
+        .filter(Boolean)
+        .join(' · '),
+    ),
   );
 }
 

@@ -1,5 +1,5 @@
 <script>
-  import { COSTS, DEV_CARD_LABELS } from '$engine';
+  import { COSTS, DEV_CARD_LABELS, EVENTS } from '$engine';
   import Bundle from '../ui/Bundle.svelte';
   import Modal from '../ui/Modal.svelte';
   import { ACHIEVEMENT_TEXT, CARD_ORDER, CARD_TEXT, HOUSE_RULES } from '../../game/cards.js';
@@ -22,6 +22,18 @@
           {/if}
           {#each activeRules as rule (rule.key)}
             <li><b>{rule.name}</b> — {rule.text}</li>
+          {/each}
+        </ul>
+      </section>
+    {/if}
+
+    {#if settings?.chaos}
+      <section class="house">
+        <h3>Chaos mode is on</h3>
+        <p>At the start of every round a new event card flips and lasts until the next one:</p>
+        <ul>
+          {#each Object.values(EVENTS) as event (event.name)}
+            <li><b>{event.name}</b> — {event.text}</li>
           {/each}
         </ul>
       </section>

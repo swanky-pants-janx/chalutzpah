@@ -17,6 +17,7 @@ import {
 } from './constants.js';
 import { checkVictory, makeEnv, resolveAbsent, startClock } from './actions.js';
 import { generateBoard } from './board.js';
+import { newChaosDeck } from './events.js';
 import { GameError } from './errors.js';
 import { emptyHand } from './hand.js';
 import { P, log } from './log.js';
@@ -44,6 +45,7 @@ export function normalizeSettings(input = {}) {
     closeNeighbours: input.closeNeighbours === true,
     watchmanChoice: input.watchmanChoice === true,
     turnTimer: TURN_TIMERS.includes(input.turnTimer) ? input.turnTimer : 0,
+    chaos: input.chaos === true,
   };
 }
 
@@ -119,6 +121,7 @@ export function createGame({ gameId, code, settings, seed, host, now }) {
     pendingDiscards: {},
     trades: [],
     nextTradeId: 1,
+    chaos: null,
     achievements: { longestRoad: null, largestArmy: null },
     roadLengths: [],
     log: [],
@@ -282,6 +285,7 @@ export function startGame(state, userId, { rng, now }) {
     rng,
     Object.entries(DEV_DECK_COUNTS).flatMap(([type, n]) => Array(n).fill(type)),
   );
+  s.chaos = s.settings.chaos ? newChaosDeck(rng) : null;
   s.status = 'setup';
   s.phase = 'setup_settlement';
   s.turn = {

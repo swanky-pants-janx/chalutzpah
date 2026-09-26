@@ -63,6 +63,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   closeNeighbours: false, // homesteads may sit one trail apart
   watchmanChoice: false, // a Watchman names the resource it takes
   turnTimer: 0, // seconds per turn; 0 = no timer
+  chaos: false, // chaos mode: a new event card every round
 });
 
 /** Turn timer choices in seconds (0 = off). */

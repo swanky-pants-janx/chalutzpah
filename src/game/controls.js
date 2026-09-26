@@ -4,10 +4,10 @@
 // the server would reject (the server re-checks everything anyway).
 
 import {
-  COSTS,
   RESOURCES,
   TOPOLOGY,
   bankRate,
+  costOf,
   hasAll,
   legalCityVertices,
   legalRoadEdges,
@@ -31,11 +31,17 @@ export function getControls(view, mode = null) {
   const settlementSpots = main ? legalSettlementVertices(view, me) : [];
   const citySpots = main ? legalCityVertices(view, me) : [];
 
+  const costs = {
+    road: costOf(view, 'road'),
+    settlement: costOf(view, 'settlement'),
+    city: costOf(view, 'city'),
+    devCard: costOf(view, 'devCard'),
+  };
   const build = {
-    road: option(main, hand, 'road', player.piecesLeft.road, roadSpots.length),
-    settlement: option(main, hand, 'settlement', player.piecesLeft.settlement, settlementSpots.length),
-    city: option(main, hand, 'city', player.piecesLeft.city, citySpots.length),
-    devCard: option(main, hand, 'devCard', view.devDeckCount, 1),
+    road: option(main, hand, costs.road, player.piecesLeft.road, roadSpots.length, 'road'),
+    settlement: option(main, hand, costs.settlement, player.piecesLeft.settlement, settlementSpots.length, 'settlement'),
+    city: option(main, hand, costs.city, player.piecesLeft.city, citySpots.length, 'city'),
+    devCard: option(main, hand, costs.devCard, view.devDeckCount, 1, 'devCard'),
   };
 
   let activeMode = null;
@@ -77,13 +83,14 @@ export function getControls(view, mode = null) {
     canRoll: myTurn && phase === 'roll',
     canEndTurn: main,
     canTrade: main,
+    costs,
     mustDiscard: view.pendingDiscards?.[me] ?? 0,
     rates: Object.fromEntries(RESOURCES.map((r) => [r, bankRate(view, me, r)])),
   };
 }
 
-function option(allowed, hand, kind, piecesLeft, spots) {
-  const affordable = hasAll(hand, COSTS[kind]);
+function option(allowed, hand, cost, piecesLeft, spots, kind) {
+  const affordable = hasAll(hand, cost);
   let reason = null;
   if (!allowed) reason = 'Not now';
   else if (!affordable) reason = 'Not enough resources';

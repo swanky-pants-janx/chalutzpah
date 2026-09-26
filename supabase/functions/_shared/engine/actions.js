@@ -12,7 +12,6 @@
 //   finished : game_over
 
 import {
-  COSTS,
   DEV_CARD_TYPES,
   DISCARD_GRACE_MS,
   ROBBER_GRACE_MS,
@@ -28,9 +27,11 @@ import { compact, emptyHand, handSize, handToList, hasAll, isResource, parseBund
 import { DEV_CARD_LABELS, TERRAIN_LABELS } from './labels.js';
 import { B, P, log, whisper } from './log.js';
 import { pick, randomInt, rollDie } from './rng.js';
+import { currentEvent, flipEvent } from './events.js';
 import {
   bankRate,
   canPlaceRoad,
+  costOf,
   canPlaceSettlement,
   discardAmount,
   legalRoadEdges,
@@ -215,7 +216,7 @@ function buildSettlement(s, actor, { vertex }, env) {
   if (!canPlaceSettlement(s, actor, v)) {
     throw new GameError('BAD_SPOT', 'Homesteads must sit on your trail with no neighbour next door.');
   }
-  pay(s, actor, COSTS.settlement);
+  pay(s, actor, costOf(s, 'settlement'));
   placeBuilding(s, actor, v, 'settlement');
   log(s, [P(s, actor), ' founded a Homestead.'], 'build');
   updateLongestRoad(s);
@@ -256,7 +257,7 @@ function buildRoad(s, actor, { edge }, env) {
       s.phase = 'main';
     }
   } else {
-    pay(s, actor, COSTS.road);
+    pay(s, actor, costOf(s, 'road'));
     placeRoad(s, actor, e);
     log(s, [P(s, actor), ' blazed a Trail.'], 'build');
   }
@@ -279,6 +280,7 @@ function advanceSetup(s, env) {
     s.turn.current = 0;
     s.turn.number = 1;
     log(s, ['Every family has staked its claim. ', P(s, 0), ' rolls first.'], 'turn');
+    flipEvent(s, env);
     return;
   }
   s.turn.current = setupSeat(n, s.turn.setupIndex);
@@ -295,7 +297,7 @@ function buildCity(s, actor, { vertex }) {
     throw new GameError('BAD_SPOT', 'Only your own Homesteads can grow into a Kibbutz.');
   }
   if (player.piecesLeft.city <= 0) throw new GameError('NO_PIECES', 'You have no Kibbutzim left to place.');
-  pay(s, actor, COSTS.city);
+  pay(s, actor, costOf(s, 'city'));
   s.buildings[v] = { owner: actor, kind: 'city' };
   player.piecesLeft.city -= 1;
   player.piecesLeft.settlement += 1;
@@ -317,8 +319,9 @@ function rollDice(s, actor, _action, env) {
 
   if (total === 7) {
     const pending = {};
+    const calm = currentEvent(s)?.noDiscard === true;
     s.players.forEach((player, i) => {
-      const n = discardAmount(handSize(player.resources));
+      const n = calm ? 0 : discardAmount(handSize(player.resources));
       if (n > 0) pending[i] = n;
     });
     s.pendingDiscards = pending;
@@ -354,9 +357,10 @@ export function produce(s, total) {
       guarded = hex.id;
       continue;
     }
+    const multiplier = currentEvent(s)?.produce?.[tile.terrain] ?? 1;
     for (const v of hex.vertices) {
       const building = s.buildings[v];
-      if (building) gains[building.owner][resource] += building.kind === 'city' ? 2 : 1;
+      if (building) gains[building.owner][resource] += (building.kind === 'city' ? 2 : 1) * multiplier;
     }
   }
 
@@ -457,7 +461,7 @@ function buyDevCard(s, actor) {
   requireCurrent(s, actor);
   requirePhase(s, 'main');
   if (s.devDeck.length === 0) throw new GameError('DECK_EMPTY', 'The Chutzpah deck is empty.');
-  pay(s, actor, COSTS.devCard);
+  pay(s, actor, costOf(s, 'devCard'));
   const type = s.devDeck.pop();
   s.players[actor].devCards.push({ type, boughtTurn: s.turn.number });
   log(s, [P(s, actor), ' drew a Chutzpah card.'], 'card');
@@ -641,6 +645,7 @@ function passTurn(s, env) {
   s.phase = 'roll';
   startClock(s, env);
   log(s, [P(s, s.turn.current), "'s turn."], 'turn');
+  if (s.turn.current === 0) flipEvent(s, env); // a new round begins
   checkVictory(s, env);
 }
 

@@ -8,6 +8,7 @@ export * from './hand.js';
 export * from './rules.js';
 export { applyAction, simulateAction, produce, updateLongestRoad, checkVictory, resolveAbsent, startClock } from './actions.js';
 export { predictView } from './predict.js';
+export { EVENTS, EVENT_IDS, currentEvent } from './events.js';
 export {
   claimHost,
   createGame,

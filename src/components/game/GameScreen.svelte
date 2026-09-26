@@ -8,6 +8,7 @@
   import Menu from '../ui/Menu.svelte';
   import BuildCard from './BuildCard.svelte';
   import DiscardDialog from './DiscardDialog.svelte';
+  import EventCard from './EventCard.svelte';
   import EventLog from './EventLog.svelte';
   import GameOverDialog from './GameOverDialog.svelte';
   import HandBar from './HandBar.svelte';
@@ -195,8 +196,9 @@
     card: 'card',
     achievement: 'victory',
     discard: 'card',
+    event: 'card',
   };
-  const SOUND_PRIORITY = ['victory', 'roll', 'achievement', 'jackal', 'steal', 'build', 'trade', 'card', 'discard'];
+  const SOUND_PRIORITY = ['victory', 'roll', 'achievement', 'event', 'jackal', 'steal', 'build', 'trade', 'card', 'discard'];
 
   let heardSeq = null;
   $effect(() => {
@@ -333,6 +335,7 @@
         {onedge}
         {onhex}
       />
+      <EventCard chaos={view.chaos} />
       {#if modeHint}
         <div class="mode-hint">
           <span>{modeHint}</span>

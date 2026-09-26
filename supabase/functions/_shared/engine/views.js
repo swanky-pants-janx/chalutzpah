@@ -32,6 +32,7 @@ export function publicView(s) {
     roadLengths: s.roadLengths,
     winner: s.winner,
     rematch: s.rematch ?? null,
+    chaos: s.chaos ? { current: s.chaos.current, round: s.chaos.round, remaining: s.chaos.deck.length } : null,
     log: s.log,
     createdAt: s.createdAt,
     startedAt: s.startedAt,

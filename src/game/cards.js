@@ -27,3 +27,11 @@ export const HOUSE_RULES = [
     text: "When you play a Watchman, name a resource. If they have one it's yours — otherwise you grab a random card.",
   },
 ];
+
+export const MODES = [
+  {
+    key: 'chaos',
+    name: 'Chaos mode',
+    text: 'A new event card every round: droughts, market days, sandstorms, caravans…',
+  },
+];

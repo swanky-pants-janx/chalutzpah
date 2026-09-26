@@ -25,7 +25,9 @@ function checkInvariants(s) {
     for (const p of s.players) expect(p.resources[r]).toBeGreaterThanOrEqual(0);
   }
   for (const [v, b] of Object.entries(s.buildings)) {
-    for (const n of TOPOLOGY.vertices[Number(v)].neighbors) expect(s.buildings[n], 'spacing rule').toBeUndefined();
+    if (!s.settings.closeNeighbours) {
+      for (const n of TOPOLOGY.vertices[Number(v)].neighbors) expect(s.buildings[n], 'spacing rule').toBeUndefined();
+    }
     expect(['settlement', 'city']).toContain(b.kind);
   }
   s.players.forEach((p, i) => {
@@ -39,13 +41,13 @@ function checkInvariants(s) {
   expect(cards).toBeLessThanOrEqual(25);
 }
 
-async function playFullGame(seed, players) {
+async function playFullGame(seed, players, settings = {}) {
   const rng = mulberry32(seed);
   const store = createMemoryStore();
   const handle = createHandler({ store, rng: mulberry32(seed * 7 + 1), now: () => 0 });
   const users = Array.from({ length: players }, (_, i) => `bot-${i}`);
 
-  const created = await handle(users[0], { op: 'create', username: 'Bot 0', settings: { maxPlayers: 4 } });
+  const created = await handle(users[0], { op: 'create', username: 'Bot 0', settings: { maxPlayers: 4, ...settings } });
   const gameId = created.gameId;
   for (let i = 1; i < players; i++) {
     const joined = await handle(users[i], { op: 'join', code: created.public.code, username: `Bot ${i}` });
@@ -105,13 +107,15 @@ const games = [
   [3, 2],
   [4, 4],
   [5, 3],
-  ...Array.from({ length: extra }, (_, k) => [100 + k, 2 + (k % 3)]),
+  [6, 4, { chaos: true }],
+  [7, 3, { chaos: true, closeNeighbours: true, watchmanChoice: true }],
+  ...Array.from({ length: extra }, (_, k) => [100 + k, 2 + (k % 3), k % 2 ? { chaos: true } : undefined]),
 ];
 
 describe('full games', () => {
-  for (const [seed, players] of games) {
-    it(`bots finish a ${players}-player game (seed ${seed})`, async () => {
-      const { final, steps } = await playFullGame(seed, players);
+  for (const [seed, players, settings] of games) {
+    it(`bots finish a ${players}-player game (seed ${seed}${settings ? ', ' + Object.keys(settings).join('+') : ''})`, async () => {
+      const { final, steps } = await playFullGame(seed, players, settings);
       expect(final.status, `stuck after ${steps} steps in phase ${final.phase}`).toBe('finished');
       expect(victoryPoints(final, final.winner, { hidden: true })).toBeGreaterThanOrEqual(final.settings.vpTarget);
       expect(final.phase).toBe('game_over');

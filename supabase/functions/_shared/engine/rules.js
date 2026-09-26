@@ -4,9 +4,11 @@
 
 import {
   ACHIEVEMENT_VP,
+  COSTS,
   DISCARD_THRESHOLD,
   PIECE_LIMITS,
 } from './constants.js';
+import { currentEvent } from './events.js';
 import { handSize } from './hand.js';
 import { TOPOLOGY } from './topology.js';
 
@@ -100,9 +102,14 @@ export function harborsOf(s, idx) {
 /** How many of `resource` the player must give the supply for one card. */
 export function bankRate(s, idx, resource) {
   const types = harborsOf(s, idx);
-  if (types.has(resource)) return 2;
-  if (types.has('any')) return 3;
-  return 4;
+  const rate = types.has(resource) ? 2 : types.has('any') ? 3 : 4;
+  const eventRate = currentEvent(s)?.bankRate;
+  return eventRate ? Math.min(rate, eventRate) : rate;
+}
+
+/** What a piece costs right now (chaos events can change it for a round). */
+export function costOf(s, kind) {
+  return currentEvent(s)?.cost?.[kind] ?? COSTS[kind];
 }
 
 /** Longest continuous trail; opponents' buildings cut a trail in two. */

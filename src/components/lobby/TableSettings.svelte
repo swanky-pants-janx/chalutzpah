@@ -1,6 +1,6 @@
 <script>
   import { TURN_TIMERS, VP_TARGETS } from '$engine';
-  import { HOUSE_RULES } from '../../game/cards.js';
+  import { HOUSE_RULES, MODES } from '../../game/cards.js';
 
   const timerLabel = (s) => (s === 0 ? 'Off' : s < 120 ? `${s}s` : `${s / 60} min`);
 
@@ -51,6 +51,27 @@
         </button>
       {/each}
     </div>
+  </div>
+
+  <div class="rules">
+    <span class="label">Modes</span>
+    {#each MODES as rule (rule.key)}
+      <button
+        type="button"
+        class="rule"
+        class:on={settings[rule.key]}
+        role="switch"
+        aria-checked={settings[rule.key] === true}
+        disabled={!isHost || busy}
+        onclick={() => onchange({ [rule.key]: !settings[rule.key] })}
+      >
+        <span class="switch" aria-hidden="true"><span class="knob"></span></span>
+        <span class="text">
+          <b>{rule.name}</b>
+          <small>{rule.text}</small>
+        </span>
+      </button>
+    {/each}
   </div>
 
   <div class="rules">
