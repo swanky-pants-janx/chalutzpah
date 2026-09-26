@@ -407,6 +407,7 @@ describe('invite previews', () => {
     const res = await handle(null, { op: 'preview', code: code.toLowerCase() });
     expect(res.ok).toBe(true);
     expect(res.preview).toMatchObject({ code, status: 'setup', host: 'Hostess' });
+    expect(res.preview.board.layout).toBe('classic');
     expect(res.preview.players.map((p) => p.name).sort()).toEqual(['Guest 1', 'Guest 2', 'Hostess']);
     const text = JSON.stringify(res.preview);
     for (const secret of ['userId', 'resources', 'devCards', 'devDeck', ':"host"', 'guest-1', 'privateLog']) {

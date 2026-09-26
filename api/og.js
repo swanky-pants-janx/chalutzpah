@@ -86,7 +86,9 @@ function sidePanel(preview, code) {
   const headline = status === 'lobby' ? `${host}'s table` : status === 'finished' ? 'Game over' : `${host}'s game`;
   const sub =
     status === 'lobby'
-      ? `${players.length} of ${settings.maxPlayers} seats taken — join in!`
+      ? players.length >= settings.maxPlayers
+        ? `All ${settings.maxPlayers} seats taken`
+        : `${players.length} of ${settings.maxPlayers} seats taken — join in!`
       : status === 'finished'
         ? `${preview.winner ?? 'Someone'} claimed the land`
         : 'Under way';
@@ -126,6 +128,13 @@ export default async function handler(request) {
     black && { name: 'Inter', data: black, weight: 900, style: 'normal' },
   ].filter(Boolean);
 
+  let board = [];
+  try {
+    board = preview ? boardLayer(preview.board) : [];
+  } catch {
+    board = []; // never fail the whole card because of the island drawing
+  }
+
   const image = el(
     {
       position: 'relative',
@@ -134,7 +143,7 @@ export default async function handler(request) {
       fontFamily: fonts.length ? 'Inter' : undefined,
       background: 'radial-gradient(circle at 20% 0%, #3a2c1c 0%, #121a24 55%)',
     },
-    ...(preview ? boardLayer(preview.board) : []),
+    ...board,
     el({ position: 'absolute', left: preview ? 690 : 80, top: 0, bottom: 0, right: 50, alignItems: 'center' }, sidePanel(preview, code)),
   );
 

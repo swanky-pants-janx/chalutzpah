@@ -2,6 +2,8 @@
 
 *chalutz* (pioneer) + *chutzpah* (nerve). A browser-based, multiplayer hex-settling board game for friends: host a table, share a 5-letter code on Discord, roll the island until you like it, and race to 10 points.
 
+**Features:** realtime play for 2–6, instant moves, a Classic (19-tile) or Grand (30-tile) island, shareable map numbers, house rules, an optional turn timer, Chaos mode event cards, rematches, and rich invite links that unfurl in Discord with a picture of your island.
+
 It follows the classic hex/resource/trading structure with original names, art, rules text and UI:
 
 | Chalutzpah | Classic concept |
@@ -37,7 +39,9 @@ You need Node 20+, the [Supabase CLI](https://supabase.com/docs/guides/cli), and
 
 ### Deploying (Vercel)
 
-Import the GitHub repo into Vercel (framework preset **Vite**) and add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as environment variables. Any static host works: `npm run build` outputs `dist/`. Invite links look like `https://your-site/?join=X7K4P`.
+Import the GitHub repo into Vercel (framework preset **Vite**) and add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as environment variables for Production and Preview, then redeploy. Invite links look like `https://your-site/join/X7K4P`: `vercel.json` rewrites them to `api/invite`, which serves the link preview (Open Graph tags) and forwards people to the join screen. `api/og` draws the preview image. Both are Vercel Edge Functions and read the same two variables.
+
+The game itself is static (`npm run build` outputs `dist/`), so any static host works. Only the Discord previews need Vercel functions.
 
 ## How it works
 
@@ -64,6 +68,19 @@ click "Build Trail"
 - **Instant moves.** Your own moves appear the moment you click: the browser predicts the result with the same engine (`engine/predict.js`) and queues the move. The server's answer replaces the prediction, and a rejected move rolls back with its message. Anything that needs dice, a hidden card or another player's hand (rolling, drawing, the Jackal's steal, Chutzpah!) waits for the server. A test replays full bot games and checks every prediction against the server's actual result.
 - **Race conditions.** Every commit is compare-and-swap on a version number inside one SQL transaction. If two players accept the same trade at once, one commits and the other is re-validated against the new state and gets "That offer is no longer on the table". Every action also carries a unique id, so a retried request can't apply twice.
 - **Randomness** (dice, shuffles, steals) comes from `crypto.getRandomValues` on the server. Maps are generated from a seed, so the same seed always produces the same island, and 6s/8s never touch.
+
+### Table options
+
+Set by the host in the lobby, and visible to everyone there:
+
+- **Island:** Classic (19 tiles, up to 4 players) or Grand (30 tiles, 11 harbors, a supply of 24 and a 34-card deck, up to 6 players). Layouts live in `engine/layouts.js` and `engine/topology.js`.
+- **Map number:** every island has a number from 1 to 999999, which is also its seed. The host can type one in to replay a favourite island.
+- **Points to win:** 8, 10 or 12.
+- **Turn timer:** off, 60 s, 90 s, 2 min or 3 min. The server stores the deadline. When it passes, any browser can call time, and the server checks its own clock, then finishes the turn minimally (roll, auto-discard, move the Jackal) and passes it. Nothing is built or traded for the player.
+- **Chaos mode:** a new event card every round from an original 15-card deck (`engine/events.js`): droughts and booms, Market Day, Calm Night, Caravan, Sandstorm, Tithe, Windfall, Shifting Sands and more.
+- **House rules:** *Close neighbours* lets homesteads sit one trail apart. *Choosy Watchman* means a Watchman names a resource: you take it if the victim has one, otherwise a random card.
+
+After a game, **Rematch** opens a new lobby with the same settings, where everyone keeps their name and colour.
 
 ### Speed
 
@@ -97,6 +114,7 @@ src/
     game/                    game screen, panels, dialogs
 supabase/
   migrations/                schema, RLS policies, SECURITY DEFINER commit functions
+api/                         Vercel Edge Functions for invite links (invite.js) and preview images (og.js)
   functions/
     game/index.ts            Edge Function entry (auth + HTTP)
     _shared/engine/          rules engine (shared with the browser)
@@ -107,13 +125,14 @@ tests/                       engine, server, UI-logic and database tests
 ## Tests
 
 ```bash
-npm test                     # 117 tests, ~4s
+npm test                     # 167 tests, ~5s
 SIM_GAMES=300 npm test       # plus 300 extra full bot games as a stress test
 ```
 
 - **Engine:** board generation, setup, placement rules, costs, production, the Jackal and discards, every card, market/harbor and player trades, both titles, victory, turn validation, duplicate and illegal actions, absent players, and no private data in the public view.
 - **Server:** join validation, reconnecting, host migration, heartbeat-gated skips, and concurrency (simultaneous rolls, double-accepted trades, parallel purchases).
-- **Simulation:** bots play complete 2–4 player games through the real handler, checking invariants after every step (resources conserved, spacing rule, piece counts).
+- **Simulation:** bots play complete 2–6 player games (classic, grand, chaos, house rules) through the real handler, checking invariants after every step (resources conserved, spacing rule, piece counts).
+- **Features:** house rules, turn timer, chaos events, grand island, map numbers, rematch and invite previews each have their own tests.
 - **Database:** runs the real migration in PGlite (Postgres in WASM) to check the RLS policies, function privileges, compare-and-swap commits, membership sync and cleanup.
 
 ## Settings and rules

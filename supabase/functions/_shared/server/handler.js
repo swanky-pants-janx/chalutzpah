@@ -245,7 +245,7 @@ export function createHandler({ store, rng = engine.cryptoRng(), now = () => Dat
           players: s.players.map((p) => ({ name: p.name, color: p.color })),
           settings: s.settings,
           mapNumber: s.board.seed,
-          board: { hexes: s.board.hexes, harbors: s.board.harbors },
+          board: { layout: s.board.layout ?? 'classic', hexes: s.board.hexes, harbors: s.board.harbors },
           winner: s.winner != null ? s.players[s.winner]?.name ?? null : null,
         },
       };
