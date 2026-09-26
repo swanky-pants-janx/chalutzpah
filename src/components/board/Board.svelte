@@ -1,8 +1,9 @@
 <script module>
   import { TERRAIN_LABELS, HARBOR_LABELS, TOPOLOGY } from '$engine';
+  import { HEX_UNIT } from './geometry.js';
 
   // Geometry in SVG units: one hex has circumradius R.
-  const R = 100;
+  const R = HEX_UNIT;
   const V = TOPOLOGY.vertices.map((v) => ({ x: v.x * R, y: v.y * R }));
   const H = TOPOLOGY.hexes.map((h) => ({
     x: h.x * R,

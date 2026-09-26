@@ -22,7 +22,7 @@
 <section class="hand card card--dark" aria-label="Your hand">
   <div class="resources">
     {#each RESOURCES as r (r)}
-      <div class="res" class:empty={!hand[r]} style="--rc: {RESOURCE_COLORS[r]}" title="{RESOURCE_LABELS[r]} · market rate {controls.rates[r]}:1">
+      <div class="res" data-res={r} class:empty={!hand[r]} style="--rc: {RESOURCE_COLORS[r]}" title="{RESOURCE_LABELS[r]} · market rate {controls.rates[r]}:1">
         <Icon name={r} size={30} />
         <span class="count">{hand[r] ?? 0}</span>
         <span class="label">{RESOURCE_LABELS[r]}</span>

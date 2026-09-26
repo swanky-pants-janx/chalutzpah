@@ -12,7 +12,7 @@
     {@const isMe = i === view.me}
     {@const current = view.turn?.current === i && view.status !== 'finished'}
     {@const hidden = isMe ? landmarkCount(p) : 0}
-    <li class="chip" class:current class:me={isMe} class:away={!online.has(p.id) || p.left} style="--pc: {colorOf(p)}; --pink: {inkOf(p)}">
+    <li class="chip" data-player-chip={p.id} class:current class:me={isMe} class:away={!online.has(p.id) || p.left} style="--pc: {colorOf(p)}; --pink: {inkOf(p)}">
       <span class="avatar" aria-hidden="true">{p.name.slice(0, 1).toUpperCase()}</span>
       <div class="info">
         <span class="name">

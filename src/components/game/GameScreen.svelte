@@ -14,6 +14,7 @@
   import OffersCard from './OffersCard.svelte';
   import PickResourcesDialog from './PickResourcesDialog.svelte';
   import PlayerStrip from './PlayerStrip.svelte';
+  import ProductionFlights from './ProductionFlights.svelte';
   import RulesDialog from './RulesDialog.svelte';
   import TradeDialog from './TradeDialog.svelte';
   import TurnCard from './TurnCard.svelte';
@@ -375,6 +376,8 @@
     <HandBar {view} {controls} {busy} onplay={playCard} />
   {/if}
 </div>
+
+<ProductionFlights {view} />
 
 {#if controls?.mustDiscard}
   <DiscardDialog need={controls.mustDiscard} hand={controls.player.resources} {busy} onconfirm={(resources) => run({ type: 'DISCARD', resources })} />
