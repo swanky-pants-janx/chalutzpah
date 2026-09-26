@@ -284,7 +284,7 @@
         </div>
       {/if}
       <div class="supply" title="Cards left in the supply">
-        <Icon name="cards" size={16} /> Chutzpah deck {view.devDeckCount}
+        <Icon name="cards" size={16} /> Chutzpah deck {view.devDeckCount} · Map No. {view.board.seed}
       </div>
     </section>
 

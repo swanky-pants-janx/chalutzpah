@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { COSTS, generateBoard, randomSeed } from '$engine';
+  import { COSTS, generateBoard, randomMapNumber } from '$engine';
   import Board from '../board/Board.svelte';
   import Bundle from '../ui/Bundle.svelte';
   import Die from '../ui/Die.svelte';
@@ -19,7 +19,7 @@
   let dialog = $state(inviteCode ? 'join' : null);
   let scrolled = $state(false);
   let openGames = $state([]);
-  let demo = $state({ board: generateBoard(randomSeed(Math.random)), robber: null, lastRoll: null });
+  let demo = $state({ board: generateBoard(randomMapNumber(Math.random)), robber: null, lastRoll: null });
   let demoRolling = $state(false);
   let demoFace = $state([3, 4]);
 
@@ -32,7 +32,7 @@
     demoRolling = true;
     demoFace = [1 + Math.floor(Math.random() * 6), 1 + Math.floor(Math.random() * 6)];
     setTimeout(() => {
-      demo = { ...demo, board: generateBoard(randomSeed(Math.random)) };
+      demo = { ...demo, board: generateBoard(randomMapNumber(Math.random)) };
       demoRolling = false;
     }, 380);
   }

@@ -1,7 +1,8 @@
 // Deterministic island generation: the same seed always yields the same map.
 
-import { HARBOR_TYPES, NUMBER_TOKENS, TERRAIN_COUNTS } from './constants.js';
-import { mulberry32, shuffle } from './rng.js';
+import { HARBOR_TYPES, MAP_NUMBER_MAX, NUMBER_TOKENS, TERRAIN_COUNTS } from './constants.js';
+import { GameError } from './errors.js';
+import { mulberry32, randomInt, shuffle } from './rng.js';
 import { TOPOLOGY } from './topology.js';
 
 const HOT_NUMBERS = new Set([6, 8]);
@@ -52,4 +53,18 @@ export function isBalanced(numbers) {
     }
   }
   return true;
+}
+
+/** A fresh island number (1–999999). The number is the board's seed, so it can be shared and replayed. */
+export function randomMapNumber(rng) {
+  return 1 + randomInt(rng, MAP_NUMBER_MAX);
+}
+
+/** Validate a map number typed by a player. */
+export function parseMapNumber(value) {
+  const n = typeof value === 'string' ? Number(value.replace(/[\s,.]/g, '')) : value;
+  if (!Number.isInteger(n) || n < 1 || n > MAP_NUMBER_MAX) {
+    throw new GameError('BAD_MAP', `Map numbers run from 1 to ${MAP_NUMBER_MAX}.`);
+  }
+  return n;
 }

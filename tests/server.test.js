@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { COSTS, legalRoadEdges, legalSettlementVertices, mulberry32 } from '../supabase/functions/_shared/engine/index.js';
+import { COSTS, generateBoard, legalRoadEdges, legalSettlementVertices, mulberry32 } from '../supabase/functions/_shared/engine/index.js';
 import { createHandler, normalizeCode } from '../supabase/functions/_shared/server/handler.js';
 import { createMemoryStore } from '../supabase/functions/_shared/server/memory-store.js';
 
@@ -316,5 +316,28 @@ describe('warm-instance cache', () => {
     // re-joining is a no-op; the reply must reflect the roll made via instance two
     const res = await one(user(first), { op: 'join', code, username: 'whatever' });
     expect(res.public.lastRoll).not.toBeNull();
+  });
+});
+
+describe('map numbers', () => {
+  it('new islands get a shareable number that recreates the exact map', async () => {
+    const { handle } = setup();
+    const created = await handle('host', { op: 'create', username: 'Host' });
+    const n = created.public.board.seed;
+    expect(Number.isInteger(n) && n >= 1 && n <= 999999).toBe(true);
+    await handle('guest-1', { op: 'join', code: created.public.code, username: 'Guest' });
+    const loaded = await handle('host', { op: 'reroll_map', gameId: created.gameId, mapNumber: '482 913' });
+    expect(loaded.public.board.seed).toBe(482913);
+    expect(loaded.public.board).toEqual(generateBoard(482913));
+  });
+
+  it('rejects bad map numbers and non-hosts', async () => {
+    const { handle } = setup();
+    const created = await handle('host', { op: 'create', username: 'Host' });
+    await handle('guest-1', { op: 'join', code: created.public.code, username: 'Guest' });
+    for (const bad of [0, -5, 1_000_000, 3.5, 'abc']) {
+      expect((await handle('host', { op: 'reroll_map', gameId: created.gameId, mapNumber: bad })).error.code, String(bad)).toBe('BAD_MAP');
+    }
+    expect((await handle('guest-1', { op: 'reroll_map', gameId: created.gameId, mapNumber: 7 })).error.code).toBe('NOT_HOST');
   });
 });

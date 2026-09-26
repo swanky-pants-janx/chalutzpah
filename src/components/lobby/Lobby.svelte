@@ -1,5 +1,5 @@
 <script>
-  import { MIN_PLAYERS, NAME_MAX_LENGTH, PLAYER_COLORS as COLOR_IDS } from '$engine';
+  import { MAP_NUMBER_MAX, MIN_PLAYERS, NAME_MAX_LENGTH, PLAYER_COLORS as COLOR_IDS } from '$engine';
   import Board from '../board/Board.svelte';
   import RulesDialog from '../game/RulesDialog.svelte';
   import Die from '../ui/Die.svelte';
@@ -27,6 +27,17 @@
   let editingName = $state(false);
   let nameDraft = $state('');
   let showRules = $state(false);
+  let mapDraft = $state('');
+
+  function loadMap(event) {
+    event.preventDefault();
+    const n = Number(mapDraft.replace(/[\s,.]/g, ''));
+    if (!Number.isInteger(n) || n < 1 || n > MAP_NUMBER_MAX) {
+      toast(`Map numbers run from 1 to ${MAP_NUMBER_MAX}.`, { kind: 'error' });
+      return;
+    }
+    reroll(n);
+  }
 
   // Everyone hears the dice when the host rolls a new island.
   let lastSeed = null;
@@ -36,14 +47,15 @@
     lastSeed = seed;
   });
 
-  async function reroll() {
+  async function reroll(mapNumber = null) {
     if (rolling) return;
     rolling = true;
     play('dice');
     faces = [1 + Math.floor(Math.random() * 6), 1 + Math.floor(Math.random() * 6)];
     const started = Date.now();
     try {
-      await table.send('reroll_map');
+      await table.send('reroll_map', mapNumber == null ? {} : { mapNumber });
+      mapDraft = '';
     } catch (err) {
       toastError(err);
     }
@@ -233,15 +245,27 @@
     <div class="map-head">
       <div>
         <p class="eyebrow">The island</p>
-        <h2>Map No. {String(view.board.seed % 100000).padStart(5, '0')}</h2>
+        <h2>
+          Map No. {view.board.seed}
+          <button class="copy-map" title="Copy map number" aria-label="Copy map number" onclick={() => copy(String(view.board.seed), 'Map number')}>
+            <Icon name="copy" size={16} />
+          </button>
+        </h2>
       </div>
-      <span class="muted">{view.mapRolls} {view.mapRolls === 1 ? 'roll' : 'rolls'} so far</span>
+      {#if isHost}
+        <form class="map-load" onsubmit={loadMap}>
+          <input class="input" bind:value={mapDraft} inputmode="numeric" maxlength="7" placeholder="Map number" aria-label="Load a map by number" />
+          <button class="btn btn--small btn--light btn--tight" disabled={rolling || !mapDraft.trim()}>Load</button>
+        </form>
+      {:else}
+        <span class="muted">{view.mapRolls} {view.mapRolls === 1 ? 'roll' : 'rolls'} so far</span>
+      {/if}
     </div>
 
     <div class="map">
       <Board {view} preview shuffling={rolling} />
       {#if isHost}
-        <button class="reroll" onclick={reroll} disabled={rolling} aria-label="Roll a new island">
+        <button class="reroll" onclick={() => reroll()} disabled={rolling} aria-label="Roll a new island">
           <Die value={faces[0]} {rolling} size={48} />
           <Die value={faces[1]} {rolling} size={48} tone="red" />
           <span class="reroll-label">Roll a new island</span>
@@ -499,6 +523,32 @@
   .map-card {
     display: grid;
     gap: 18px;
+  }
+
+  .copy-map {
+    margin-left: 6px;
+    width: 30px;
+    height: 30px;
+    border-radius: 25px;
+    border: 1px solid rgba(43, 33, 24, 0.14);
+    background: #fffaf0;
+    color: var(--text-muted);
+    display: inline-grid;
+    place-items: center;
+    vertical-align: middle;
+    cursor: pointer;
+  }
+
+  .map-load {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .map-load .input {
+    width: 150px;
+    padding: 9px 16px;
+    font-size: 0.95rem;
   }
 
   .map-head {

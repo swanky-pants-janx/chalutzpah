@@ -60,6 +60,9 @@ export const DEFAULT_SETTINGS = Object.freeze({ maxPlayers: 4, vpTarget: 10 });
 
 export const PLAYER_COLORS = Object.freeze(['pomegranate', 'cobalt', 'almond', 'fig']);
 
+/** Islands are identified by a shareable number, which is also their seed. */
+export const MAP_NUMBER_MAX = 999999;
+
 export const NAME_MAX_LENGTH = 16;
 export const MAX_OPEN_TRADES = 3;
 export const LOG_LIMIT = 80;

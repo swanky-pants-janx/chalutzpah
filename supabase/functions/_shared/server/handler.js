@@ -142,7 +142,7 @@ export function createHandler({ store, rng = engine.cryptoRng(), now = () => Dat
           gameId,
           code,
           settings: settings ?? {},
-          seed: engine.randomSeed(rng),
+          seed: engine.randomMapNumber(rng),
           host: { playerId: makePlayerId(rng), userId, name },
           now: now(),
         });
@@ -164,8 +164,10 @@ export function createHandler({ store, rng = engine.cryptoRng(), now = () => Dat
 
     leave: (userId, { gameId }) => mutate(gameId, userId, (state) => engine.leaveGame(state, userId, { rng, now: now() })),
 
-    reroll_map: (userId, { gameId }) =>
-      mutate(gameId, userId, (state) => engine.rerollMap(state, userId, engine.randomSeed(rng))),
+    reroll_map: (userId, { gameId, mapNumber }) => {
+      const seed = mapNumber == null ? engine.randomMapNumber(rng) : engine.parseMapNumber(mapNumber);
+      return mutate(gameId, userId, (state) => engine.rerollMap(state, userId, seed));
+    },
 
     start: (userId, { gameId }) => mutate(gameId, userId, (state) => engine.startGame(state, userId, { rng, now: now() })),
 
