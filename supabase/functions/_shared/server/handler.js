@@ -223,6 +223,34 @@ export function createHandler({ store, rng = engine.cryptoRng(), now = () => Dat
       return follow(pointer);
     },
 
+    /**
+     * Public, read-only summary of a table for invite-link previews (Discord
+     * unfurls). Anyone holding the code could join it anyway; this shows the
+     * island, names and settings — never hands, cards or who holds what.
+     */
+    async preview(_userId, { code }) {
+      const clean = normalizeCode(code);
+      if (!CODE_PATTERN.test(clean)) throw new GameError('BAD_CODE', 'Game codes are 5 letters and numbers.');
+      const game = await store.findByCode(clean);
+      const record = game ? await store.load(game.id) : null;
+      if (!record) throw new GameError('NOT_FOUND', 'No game uses that code.');
+      const s = record.state;
+      const host = s.players.find((p) => p.id === s.hostId) ?? s.players[0];
+      return {
+        ok: true,
+        preview: {
+          code: s.code,
+          status: s.status,
+          host: host?.name ?? null,
+          players: s.players.map((p) => ({ name: p.name, color: p.color })),
+          settings: s.settings,
+          mapNumber: s.board.seed,
+          board: { hexes: s.board.hexes, harbors: s.board.harbors },
+          winner: s.winner != null ? s.players[s.winner]?.name ?? null : null,
+        },
+      };
+    },
+
     async sync(userId, { gameId }) {
       if (typeof gameId !== 'string' || !UUID_PATTERN.test(gameId)) throw new GameError('BAD_REQUEST', 'Missing game id.');
       const record = await store.load(gameId);
@@ -235,8 +263,8 @@ export function createHandler({ store, rng = engine.cryptoRng(), now = () => Dat
 
   /** Returns { ok: true, ... } or { ok: false, error: { code, message } }. */
   return async function handle(userId, body) {
-    if (!userId) return { ok: false, error: { code: 'UNAUTHORIZED', message: 'No session.' } };
     const op = body?.op;
+    if (!userId && op !== 'preview') return { ok: false, error: { code: 'UNAUTHORIZED', message: 'No session.' } };
     if (typeof op !== 'string' || !Object.hasOwn(ops, op)) {
       return { ok: false, error: { code: 'BAD_REQUEST', message: 'Unknown request.' } };
     }

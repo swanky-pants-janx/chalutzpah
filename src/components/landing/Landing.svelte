@@ -14,7 +14,8 @@
   import { myOpenGames, table } from '../../lib/table.svelte.js';
   import { toastError } from '../../lib/toasts.svelte.js';
 
-  const inviteCode = new URLSearchParams(location.search).get('join') ?? '';
+  // Invite links look like /join/X7K4P (older ones: /?join=X7K4P).
+  const inviteCode = new URLSearchParams(location.search).get('join') ?? location.pathname.match(/^\/join\/([A-Za-z0-9]{5})/)?.[1] ?? '';
 
   let dialog = $state(inviteCode ? 'join' : null);
   let scrolled = $state(false);

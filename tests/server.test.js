@@ -398,3 +398,22 @@ describe('rematch', () => {
     expect(store.games.get(gameId).state.rematch.gameId).toBe(again.gameId);
   });
 });
+
+describe('invite previews', () => {
+  it('are public, by code, and reveal nothing private', async () => {
+    const { handle } = setup();
+    const { gameId, code } = await hostAndJoin(handle, 3);
+    await handle('host', { op: 'start', gameId });
+    const res = await handle(null, { op: 'preview', code: code.toLowerCase() });
+    expect(res.ok).toBe(true);
+    expect(res.preview).toMatchObject({ code, status: 'setup', host: 'Hostess' });
+    expect(res.preview.players.map((p) => p.name).sort()).toEqual(['Guest 1', 'Guest 2', 'Hostess']);
+    const text = JSON.stringify(res.preview);
+    for (const secret of ['userId', 'resources', 'devCards', 'devDeck', ':"host"', 'guest-1', 'privateLog']) {
+      expect(text).not.toContain(secret);
+    }
+    expect((await handle(null, { op: 'preview', code: 'ZZZZZ' })).error.code).toBe('NOT_FOUND');
+    // everything else still needs a session
+    expect((await handle(null, { op: 'sync', gameId })).error.code).toBe('UNAUTHORIZED');
+  });
+});

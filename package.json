@@ -14,7 +14,8 @@
     "functions:deploy": "supabase functions deploy game --use-api"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.117.2"
+    "@supabase/supabase-js": "^2.117.2",
+    "@vercel/og": "^0.8.6"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.8",

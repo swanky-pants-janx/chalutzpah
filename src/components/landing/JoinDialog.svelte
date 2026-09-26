@@ -22,7 +22,7 @@
     try {
       const res = await callGame('join', { code: cleanCode, username });
       save('chalutzpah:name', username.trim());
-      history.replaceState(null, '', location.pathname);
+      history.replaceState(null, '', '/');
       await table.enter(res);
     } catch (err) {
       toastError(err);

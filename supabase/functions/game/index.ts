@@ -25,22 +25,26 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return json({ ok: false, error: { code: 'BAD_REQUEST', message: 'POST only.' } }, 405);
 
-  // Verify the session token locally against the project's published signing
-  // key (cached after the first request) instead of a round trip to the Auth
-  // server on every move. Expired or forged tokens are rejected; the anon key
-  // itself has no user and role 'anon', so it can't act as a player.
-  const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
-  const { data, error } = token ? await admin.auth.getClaims(token) : { data: null, error: true };
-  const userId = data?.claims?.sub;
-  if (error || !userId || data.claims.role !== 'authenticated') {
-    return json({ ok: false, error: { code: 'UNAUTHORIZED', message: 'Your session expired — refresh the page.' } }, 401);
-  }
-
-  let body: unknown;
+  let body: { op?: string } | null;
   try {
     body = await req.json();
   } catch {
     return json({ ok: false, error: { code: 'BAD_REQUEST', message: 'Malformed request.' } }, 400);
+  }
+
+  // Invite-link previews are public (read-only, by game code). Everything else
+  // needs a player session: verify the token locally against the project's
+  // published signing key (cached) instead of a round trip to the Auth server.
+  // Expired or forged tokens are rejected; the anon key has role 'anon' and no
+  // user, so it can't act as a player.
+  let userId: string | null = null;
+  if (body?.op !== 'preview') {
+    const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
+    const { data, error } = token ? await admin.auth.getClaims(token) : { data: null, error: true };
+    userId = data?.claims?.sub ?? null;
+    if (error || !userId || data?.claims?.role !== 'authenticated') {
+      return json({ ok: false, error: { code: 'UNAUTHORIZED', message: 'Your session expired — refresh the page.' } }, 401);
+    }
   }
 
   try {

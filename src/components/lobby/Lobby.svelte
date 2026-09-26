@@ -20,7 +20,7 @@
   const host = $derived(view.players.find((p) => p.id === view.hostId));
   const openSeats = $derived(Math.max(0, view.settings.maxPlayers - view.players.length));
   const canStart = $derived(isHost && view.players.length >= MIN_PLAYERS);
-  const inviteLink = $derived(`${location.origin}${location.pathname}?join=${view.code}`);
+  const inviteLink = $derived(`${location.origin}/join/${view.code}`);
 
   let rolling = $state(false);
   let starting = $state(false);

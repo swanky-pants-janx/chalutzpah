@@ -1,6 +1,6 @@
 <script module>
   import { TERRAIN_LABELS, HARBOR_LABELS, TOPOLOGY } from '$engine';
-  import { HEX_UNIT } from './geometry.js';
+  import { HEX_UNIT, harborBadge, hexPoints } from './geometry.js';
 
   // Geometry in SVG units: one hex has circumradius R.
   const R = HEX_UNIT;
@@ -10,13 +10,6 @@
     y: h.y * R,
     ring: Math.max(Math.abs(h.q), Math.abs(h.r), Math.abs(-h.q - h.r)),
   }));
-
-  function hexPoints(cx, cy, radius, offsetDeg = -90) {
-    return Array.from({ length: 6 }, (_, i) => {
-      const a = (Math.PI / 180) * (60 * i + offsetDeg);
-      return `${(cx + radius * Math.cos(a)).toFixed(1)},${(cy + radius * Math.sin(a)).toFixed(1)}`;
-    }).join(' ');
-  }
 
   const TILE_POINTS = H.map((h) => hexPoints(h.x, h.y, R * 0.965));
   const SHORE_POINTS = H.map((h) => hexPoints(h.x, h.y, R * 1.12));
@@ -35,17 +28,7 @@
     };
   });
 
-  function harborGeometry(edge) {
-    const e = TOPOLOGY.edges[edge];
-    const [a, b] = e.vertices;
-    const hex = H[e.hexes[0]];
-    const mx = (V[a].x + V[b].x) / 2;
-    const my = (V[a].y + V[b].y) / 2;
-    const dx = mx - hex.x;
-    const dy = my - hex.y;
-    const len = Math.hypot(dx, dy);
-    return { a: V[a], b: V[b], x: mx + (dx / len) * 70, y: my + (dy / len) * 70 };
-  }
+  const harborGeometry = (edge) => harborBadge(edge);
 
   const pips = (n) => 6 - Math.abs(7 - n);
 
