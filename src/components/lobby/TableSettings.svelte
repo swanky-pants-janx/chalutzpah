@@ -1,5 +1,5 @@
 <script>
-  import { TURN_TIMERS, VP_TARGETS } from '$engine';
+  import { LAYOUTS, LAYOUT_IDS, MIN_PLAYERS, TURN_TIMERS, VP_TARGETS } from '$engine';
   import { HOUSE_RULES, MODES } from '../../game/cards.js';
 
   const timerLabel = (s) => (s === 0 ? 'Off' : s < 120 ? `${s}s` : `${s / 60} min`);
@@ -9,6 +9,8 @@
 
   const settings = $derived(view.settings);
   const seated = $derived(view.players.length);
+  const cap = $derived(LAYOUTS[settings.layout ?? 'classic'].maxPlayers);
+  const seatChoices = $derived(Array.from({ length: cap - MIN_PLAYERS + 1 }, (_, i) => MIN_PLAYERS + i));
 </script>
 
 <section class="card settings">
@@ -18,9 +20,25 @@
   </div>
 
   <div class="row">
+    <span class="label">Island</span>
+    <div class="segmented" role="group" aria-label="Island size">
+      {#each LAYOUT_IDS as id (id)}
+        <button
+          type="button"
+          aria-pressed={(settings.layout ?? 'classic') === id}
+          disabled={!isHost || busy || seated > LAYOUTS[id].maxPlayers}
+          onclick={() => onchange({ layout: id, maxPlayers: id === 'grand' ? Math.max(settings.maxPlayers, 6) : Math.min(settings.maxPlayers, 4) })}
+        >
+          {LAYOUTS[id].name} · up to {LAYOUTS[id].maxPlayers}
+        </button>
+      {/each}
+    </div>
+  </div>
+
+  <div class="row">
     <span class="label">Players</span>
     <div class="segmented" role="group" aria-label="Maximum players">
-      {#each [2, 3, 4] as n (n)}
+      {#each seatChoices as n (n)}
         <button
           type="button"
           aria-pressed={settings.maxPlayers === n}

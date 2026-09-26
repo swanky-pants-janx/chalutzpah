@@ -2,7 +2,7 @@
 // code and who's seated. Rendered with @vercel/og (satori + resvg).
 
 import { ImageResponse } from '@vercel/og';
-import { BOARD_VIEWBOX } from '../src/components/board/geometry.js';
+import { geometryFor } from '../src/components/board/geometry.js';
 import { PLAYER_COLORS } from '../src/lib/theme.js';
 import { boardSvg, tokenPositions } from './_lib/board-svg.js';
 import { codeFrom, fetchPreview } from './_lib/preview.js';
@@ -11,10 +11,15 @@ export const config = { runtime: 'edge' };
 
 const WIDTH = 1200;
 const HEIGHT = 630;
-const BOARD_W = 660;
-const BOARD_H = (BOARD_W * BOARD_VIEWBOX.height) / BOARD_VIEWBOX.width;
-const BOARD_X = 10;
-const BOARD_Y = (HEIGHT - BOARD_H) / 2;
+
+/** Fit the island into the left of the card (the grand island is taller). */
+function boardBox(board) {
+  const vb = geometryFor(board.layout).viewBox;
+  const scale = Math.min(660 / vb.width, 620 / vb.height);
+  const width = vb.width * scale;
+  const height = vb.height * scale;
+  return { vb, scale, width, height, x: 10 + (660 - width) / 2, y: (HEIGHT - height) / 2 };
+}
 
 /** Minimal element helper: satori wants display:flex on anything with children. */
 const el = (style, ...children) => ({ type: 'div', props: { style: { display: 'flex', ...style }, children } });
@@ -34,18 +39,19 @@ function toBase64(text) {
 }
 
 function boardLayer(board) {
-  const scale = BOARD_W / BOARD_VIEWBOX.width;
+  const box = boardBox(board);
+  const size = box.scale > 0.5 ? 36 : 30;
   const tokens = tokenPositions(board).map((t) =>
     el(
       {
         position: 'absolute',
-        left: BOARD_X + (t.x - BOARD_VIEWBOX.x) * scale - 18,
-        top: BOARD_Y + (t.y - BOARD_VIEWBOX.y) * scale - 18,
-        width: 36,
-        height: 36,
+        left: box.x + (t.x - box.vb.x) * box.scale - size / 2,
+        top: box.y + (t.y - box.vb.y) * box.scale - size / 2,
+        width: size,
+        height: size,
         alignItems: 'center',
         justifyContent: 'center',
-        fontSize: 20,
+        fontSize: size > 32 ? 20 : 16,
         fontWeight: 900,
         color: t.number === 6 || t.number === 8 ? '#b3263e' : '#2b2118',
       },
@@ -57,9 +63,9 @@ function boardLayer(board) {
       type: 'img',
       props: {
         src: `data:image/svg+xml;base64,${toBase64(boardSvg(board))}`,
-        width: BOARD_W,
-        height: BOARD_H,
-        style: { position: 'absolute', left: BOARD_X, top: BOARD_Y },
+        width: box.width,
+        height: box.height,
+        style: { position: 'absolute', left: box.x, top: box.y },
       },
     },
     ...tokens,

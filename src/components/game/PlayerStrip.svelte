@@ -7,7 +7,7 @@
   let { view, online } = $props();
 </script>
 
-<ol class="strip" aria-label="Players">
+<ol class="strip" class:many={view.players.length > 4} aria-label="Players">
   {#each view.players as p, i (p.id)}
     {@const isMe = i === view.me}
     {@const current = view.turn?.current === i && view.status !== 'finished'}
@@ -162,6 +162,29 @@
 
   .vp small {
     font-size: 0.8rem;
+  }
+
+  .many .chip {
+    min-width: 140px;
+    gap: 8px;
+    padding: 8px 10px 8px 8px;
+  }
+
+  .many .avatar {
+    width: 32px;
+    height: 32px;
+  }
+
+  .many .vp {
+    min-width: 36px;
+    height: 36px;
+    font-size: 1.1rem;
+  }
+
+  /* with 5–6 players, keep cards and Chutzpah cards; titles still show */
+  .many .stats > span:nth-child(3),
+  .many .stats > span:nth-child(4) {
+    display: none;
   }
 
   @media (max-width: 1400px) {

@@ -1,35 +1,38 @@
-// Static geometry of the 19-tile island: hexes, corners (vertices) and sides (edges).
-// Computed once from axial coordinates so ids are deterministic everywhere.
+// Static geometry of each island layout: hexes, corners (vertices) and sides
+// (edges). Built once per layout from its row lengths, so ids are
+// deterministic everywhere (server, browser, preview images).
 //
-// Hexes are pointy-top with circumradius 1. Vertex/edge ids are assigned in the
-// order they are first encountered while walking hexes row by row.
+// Hexes are pointy-top with circumradius 1, laid out in centred rows. Vertex and
+// edge ids are assigned in the order they are first met walking the hexes row
+// by row, left to right. (The classic layout's ids are the same as they always
+// were.)
 
 const SQRT3 = Math.sqrt(3);
-const RADIUS = 2;
 
-/** Gaps (in coastal edges) between consecutive harbors; sums to 30 coastal edges. */
-const HARBOR_GAPS = [3, 3, 4, 3, 3, 4, 3, 3, 4];
+export const LAYOUT_SHAPES = Object.freeze({
+  classic: {
+    rows: [3, 4, 5, 4, 3],
+    /** Gaps (in coastal edges) between consecutive harbors; sums to 30. */
+    harborGaps: [3, 3, 4, 3, 3, 4, 3, 3, 4],
+  },
+  grand: {
+    rows: [3, 4, 5, 6, 5, 4, 3],
+    /** 11 harbors around 38 coastal edges. */
+    harborGaps: [4, 3, 4, 3, 3, 4, 3, 4, 3, 4, 3],
+  },
+});
 
 const round = (n) => Math.round(n * 1000) / 1000;
 
-function buildTopology() {
+function buildTopology({ rows, harborGaps }) {
   const hexes = [];
-  for (let r = -RADIUS; r <= RADIUS; r++) {
-    const qMin = Math.max(-RADIUS, -r - RADIUS);
-    const qMax = Math.min(RADIUS, -r + RADIUS);
-    for (let q = qMin; q <= qMax; q++) {
-      hexes.push({
-        id: hexes.length,
-        q,
-        r,
-        x: round(SQRT3 * (q + r / 2)),
-        y: round(1.5 * r),
-        vertices: [],
-        edges: [],
-        neighbors: [],
-      });
+  rows.forEach((length, k) => {
+    for (let i = 0; i < length; i++) {
+      const x = round(SQRT3 * (i - (length - 1) / 2));
+      const y = round(1.5 * (k - (rows.length - 1) / 2));
+      hexes.push({ id: hexes.length, x, y, row: k, vertices: [], edges: [], neighbors: [] });
     }
-  }
+  });
 
   const vertices = [];
   const vertexByKey = new Map();
@@ -92,7 +95,7 @@ function buildTopology() {
 
   const harborSlots = [];
   let index = 0;
-  for (const gap of HARBOR_GAPS) {
+  for (const gap of harborGaps) {
     harborSlots.push(coastalEdges[index]);
     index += gap;
   }
@@ -108,7 +111,20 @@ function deepFreeze(value) {
   return value;
 }
 
-export const TOPOLOGY = buildTopology();
+const cache = new Map();
+
+/** Topology for a layout id ('classic' | 'grand'); unknown ids fall back to classic. */
+export function topologyFor(layout = 'classic') {
+  const id = Object.hasOwn(LAYOUT_SHAPES, layout) ? layout : 'classic';
+  if (!cache.has(id)) cache.set(id, buildTopology(LAYOUT_SHAPES[id]));
+  return cache.get(id);
+}
+
+/** Topology of the board a game (or client view) is played on. */
+export const topo = (s) => topologyFor(s?.board?.layout);
+
+/** The classic 19-tile island (kept for code and tests that only need that one). */
+export const TOPOLOGY = topologyFor('classic');
 export const HEX_COUNT = TOPOLOGY.hexes.length;
 export const VERTEX_COUNT = TOPOLOGY.vertices.length;
 export const EDGE_COUNT = TOPOLOGY.edges.length;

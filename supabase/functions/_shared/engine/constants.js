@@ -54,7 +54,7 @@ export const LARGEST_ARMY_MIN = 3;
 export const ACHIEVEMENT_VP = 2;
 
 export const MIN_PLAYERS = 2;
-export const MAX_PLAYERS = 4;
+export const MAX_PLAYERS = 6; // grand island; classic tables cap at 4
 export const VP_TARGETS = Object.freeze([8, 10, 12]);
 export const DEFAULT_SETTINGS = Object.freeze({
   maxPlayers: 4,
@@ -64,6 +64,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   watchmanChoice: false, // a Watchman names the resource it takes
   turnTimer: 0, // seconds per turn; 0 = no timer
   chaos: false, // chaos mode: a new event card every round
+  layout: 'classic', // 'classic' (19 tiles, 2–4) or 'grand' (30 tiles, up to 6)
 });
 
 /** Turn timer choices in seconds (0 = off). */
@@ -73,7 +74,7 @@ export const DISCARD_GRACE_MS = 20_000;
 /** After the discards, the roller gets at least this long to move the Jackal. */
 export const ROBBER_GRACE_MS = 15_000;
 
-export const PLAYER_COLORS = Object.freeze(['pomegranate', 'cobalt', 'almond', 'fig']);
+export const PLAYER_COLORS = Object.freeze(['pomegranate', 'cobalt', 'almond', 'fig', 'citrus', 'teal']);
 
 /** Islands are identified by a shareable number, which is also their seed. */
 export const MAP_NUMBER_MAX = 999999;

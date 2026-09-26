@@ -4,10 +4,10 @@
 
 import { describe, expect, it } from 'vitest';
 import {
-  BANK_PER_RESOURCE,
+  layoutOf,
+  topologyFor,
   PIECE_LIMITS,
   RESOURCES,
-  TOPOLOGY,
   handSize,
   hasAll,
   mulberry32,
@@ -20,13 +20,13 @@ import { createMemoryStore } from '../supabase/functions/_shared/server/memory-s
 function checkInvariants(s) {
   for (const r of RESOURCES) {
     const total = s.bank[r] + s.players.reduce((n, p) => n + p.resources[r], 0);
-    expect(total, `conservation of ${r}`).toBe(BANK_PER_RESOURCE);
+    expect(total, `conservation of ${r}`).toBe(layoutOf(s.settings.layout).bank);
     expect(s.bank[r]).toBeGreaterThanOrEqual(0);
     for (const p of s.players) expect(p.resources[r]).toBeGreaterThanOrEqual(0);
   }
   for (const [v, b] of Object.entries(s.buildings)) {
     if (!s.settings.closeNeighbours) {
-      for (const n of TOPOLOGY.vertices[Number(v)].neighbors) expect(s.buildings[n], 'spacing rule').toBeUndefined();
+      for (const n of topologyFor(s.board.layout).vertices[Number(v)].neighbors) expect(s.buildings[n], 'spacing rule').toBeUndefined();
     }
     expect(['settlement', 'city']).toContain(b.kind);
   }
@@ -38,7 +38,8 @@ function checkInvariants(s) {
     expect(roads + p.piecesLeft.road).toBe(PIECE_LIMITS.road);
   });
   const cards = s.devDeck.length + s.players.reduce((n, p) => n + p.devCards.length + p.knightsPlayed, 0);
-  expect(cards).toBeLessThanOrEqual(25);
+  const deckSize = Object.values(layoutOf(s.settings.layout).devDeck).reduce((a, b) => a + b, 0);
+  expect(cards).toBeLessThanOrEqual(deckSize);
 }
 
 async function playFullGame(seed, players, settings = {}) {
@@ -109,7 +110,11 @@ const games = [
   [5, 3],
   [6, 4, { chaos: true }],
   [7, 3, { chaos: true, closeNeighbours: true, watchmanChoice: true }],
-  ...Array.from({ length: extra }, (_, k) => [100 + k, 2 + (k % 3), k % 2 ? { chaos: true } : undefined]),
+  [8, 5, { layout: 'grand', maxPlayers: 6 }],
+  [9, 6, { layout: 'grand', maxPlayers: 6, chaos: true }],
+  ...Array.from({ length: extra }, (_, k) =>
+    k % 4 === 3 ? [100 + k, 5 + (k % 2), { layout: 'grand', maxPlayers: 6, chaos: k % 8 === 3 }] : [100 + k, 2 + (k % 3), k % 2 ? { chaos: true } : undefined],
+  ),
 ];
 
 describe('full games', () => {
@@ -119,7 +124,7 @@ describe('full games', () => {
       expect(final.status, `stuck after ${steps} steps in phase ${final.phase}`).toBe('finished');
       expect(victoryPoints(final, final.winner, { hidden: true })).toBeGreaterThanOrEqual(final.settings.vpTarget);
       expect(final.phase).toBe('game_over');
-      expect(handSize(final.bank)).toBeLessThanOrEqual(BANK_PER_RESOURCE * 5);
+      expect(handSize(final.bank)).toBeLessThanOrEqual(layoutOf(final.settings.layout).bank * 5);
     });
   }
 });

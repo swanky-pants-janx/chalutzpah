@@ -3,7 +3,7 @@
 import {
   COSTS,
   RESOURCES,
-  TOPOLOGY,
+  topologyFor,
   bankRate,
   hasAll,
   legalCityVertices,
@@ -26,7 +26,7 @@ function decide(s, i, rng) {
       if (playableDevCards(s, i).includes('watchman') && rng() < 0.5) return { type: 'PLAY_DEV_CARD', card: 'watchman' };
       return { type: 'ROLL_DICE' };
     case 'robber': {
-      const hexes = TOPOLOGY.hexes.map((h) => h.id).filter((h) => h !== s.robber);
+      const hexes = topologyFor(s.board.layout).hexes.map((h) => h.id).filter((h) => h !== s.robber);
       const hex = pick(rng, hexes);
       const victims = robberVictims(s, i, hex);
       return { type: 'MOVE_ROBBER', hex, victim: victims.length ? pick(rng, victims) : null };

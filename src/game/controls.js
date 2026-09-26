@@ -5,7 +5,6 @@
 
 import {
   RESOURCES,
-  TOPOLOGY,
   bankRate,
   costOf,
   hasAll,
@@ -13,6 +12,7 @@ import {
   legalRoadEdges,
   legalSettlementVertices,
   playableDevCards,
+  topologyFor,
 } from '$engine';
 
 const NONE = Object.freeze({ vertices: [], edges: [], hexes: [] });
@@ -58,7 +58,7 @@ export function getControls(view, mode = null) {
       targets = { ...NONE, edges: legalRoadEdges(view, me) };
     } else if (phase === 'robber') {
       activeMode = 'robber';
-      targets = { ...NONE, hexes: TOPOLOGY.hexes.map((h) => h.id).filter((h) => h !== view.robber) };
+      targets = { ...NONE, hexes: topologyFor(view.board.layout).hexes.map((h) => h.id).filter((h) => h !== view.robber) };
     } else if (main && mode && build[mode]?.can) {
       activeMode = mode;
       if (mode === 'road') targets = { ...NONE, edges: roadSpots };

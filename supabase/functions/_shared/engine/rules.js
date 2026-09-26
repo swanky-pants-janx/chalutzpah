@@ -10,7 +10,7 @@ import {
 } from './constants.js';
 import { currentEvent } from './events.js';
 import { handSize } from './hand.js';
-import { TOPOLOGY } from './topology.js';
+import { topo } from './topology.js';
 
 export function playerIndexByUser(s, userId) {
   return s.players.findIndex((p) => p.userId === userId);
@@ -41,17 +41,17 @@ export function roadOwner(s, edge) {
 export function isSettlementSpotOpen(s, vertex) {
   if (buildingAt(s, vertex)) return false;
   if (s.settings?.closeNeighbours) return true;
-  return TOPOLOGY.vertices[vertex].neighbors.every((n) => !buildingAt(s, n));
+  return topo(s).vertices[vertex].neighbors.every((n) => !buildingAt(s, n));
 }
 
 export function canPlaceSettlement(s, idx, vertex, { setup = false } = {}) {
   if (!isSettlementSpotOpen(s, vertex)) return false;
   if (setup) return true;
-  return TOPOLOGY.vertices[vertex].edges.some((e) => roadOwner(s, e) === idx);
+  return topo(s).vertices[vertex].edges.some((e) => roadOwner(s, e) === idx);
 }
 
 export function legalSettlementVertices(s, idx, opts = {}) {
-  return TOPOLOGY.vertices.filter((v) => canPlaceSettlement(s, idx, v.id, opts)).map((v) => v.id);
+  return topo(s).vertices.filter((v) => canPlaceSettlement(s, idx, v.id, opts)).map((v) => v.id);
 }
 
 /**
@@ -61,17 +61,17 @@ export function legalSettlementVertices(s, idx, opts = {}) {
  */
 export function canPlaceRoad(s, idx, edge, { fromVertex = null } = {}) {
   if (roadOwner(s, edge) !== null) return false;
-  const ends = TOPOLOGY.edges[edge].vertices;
+  const ends = topo(s).edges[edge].vertices;
   if (fromVertex !== null) return ends.includes(fromVertex);
   return ends.some((v) => {
     const building = buildingAt(s, v);
     if (building) return building.owner === idx;
-    return TOPOLOGY.vertices[v].edges.some((other) => other !== edge && roadOwner(s, other) === idx);
+    return topo(s).vertices[v].edges.some((other) => other !== edge && roadOwner(s, other) === idx);
   });
 }
 
 export function legalRoadEdges(s, idx, opts = {}) {
-  return TOPOLOGY.edges.filter((e) => canPlaceRoad(s, idx, e.id, opts)).map((e) => e.id);
+  return topo(s).edges.filter((e) => canPlaceRoad(s, idx, e.id, opts)).map((e) => e.id);
 }
 
 export function legalCityVertices(s, idx) {
@@ -83,7 +83,7 @@ export function legalCityVertices(s, idx) {
 /** Opponents with a building on `hex` who hold at least one card. */
 export function robberVictims(s, idx, hex) {
   const owners = new Set();
-  for (const v of TOPOLOGY.hexes[hex].vertices) {
+  for (const v of topo(s).hexes[hex].vertices) {
     const building = buildingAt(s, v);
     if (building && building.owner !== idx) owners.add(building.owner);
   }
@@ -93,7 +93,7 @@ export function robberVictims(s, idx, hex) {
 export function harborsOf(s, idx) {
   const types = new Set();
   for (const harbor of s.board.harbors) {
-    const [a, b] = TOPOLOGY.edges[harbor.edge].vertices;
+    const [a, b] = topo(s).edges[harbor.edge].vertices;
     if (buildingAt(s, a)?.owner === idx || buildingAt(s, b)?.owner === idx) types.add(harbor.type);
   }
   return types;
@@ -128,16 +128,16 @@ export function longestRoadLength(s, idx) {
   const walk = (vertex, length) => {
     if (length > best) best = length;
     if (length > 0 && blocked(vertex)) return;
-    for (const edge of TOPOLOGY.vertices[vertex].edges) {
+    for (const edge of topo(s).vertices[vertex].edges) {
       if (!own.has(edge) || used.has(edge)) continue;
       used.add(edge);
-      const [a, b] = TOPOLOGY.edges[edge].vertices;
+      const [a, b] = topo(s).edges[edge].vertices;
       walk(a === vertex ? b : a, length + 1);
       used.delete(edge);
     }
   };
 
-  const starts = new Set([...own].flatMap((edge) => TOPOLOGY.edges[edge].vertices));
+  const starts = new Set([...own].flatMap((edge) => topo(s).edges[edge].vertices));
   for (const vertex of starts) walk(vertex, 0);
   return best;
 }

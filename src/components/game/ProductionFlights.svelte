@@ -1,5 +1,5 @@
 <script>
-  import { TERRAIN_RESOURCE, TOPOLOGY } from '$engine';
+  import { TERRAIN_RESOURCE, topologyFor } from '$engine';
   import Icon from '../ui/Icon.svelte';
   import { HEX_UNIT } from '../board/geometry.js';
 
@@ -41,7 +41,7 @@
     }
 
     const batch = [];
-    for (const hex of TOPOLOGY.hexes) {
+    for (const hex of topologyFor(view.board.layout).hexes) {
       const tile = view.board.hexes[hex.id];
       const resource = TERRAIN_RESOURCE[tile.terrain];
       if (tile.number !== roll.total || !resource || hex.id === view.robber) continue;

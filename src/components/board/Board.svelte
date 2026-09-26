@@ -1,34 +1,6 @@
 <script module>
-  import { TERRAIN_LABELS, HARBOR_LABELS, TOPOLOGY } from '$engine';
-  import { HEX_UNIT, harborBadge, hexPoints } from './geometry.js';
-
-  // Geometry in SVG units: one hex has circumradius R.
-  const R = HEX_UNIT;
-  const V = TOPOLOGY.vertices.map((v) => ({ x: v.x * R, y: v.y * R }));
-  const H = TOPOLOGY.hexes.map((h) => ({
-    x: h.x * R,
-    y: h.y * R,
-    ring: Math.max(Math.abs(h.q), Math.abs(h.r), Math.abs(-h.q - h.r)),
-  }));
-
-  const TILE_POINTS = H.map((h) => hexPoints(h.x, h.y, R * 0.965));
-  const SHORE_POINTS = H.map((h) => hexPoints(h.x, h.y, R * 1.12));
-  const FRAME_POINTS = hexPoints(0, 0, 575, 0);
-
-  const EDGE_SEGMENTS = TOPOLOGY.edges.map((e) => {
-    const [a, b] = e.vertices;
-    const A = V[a];
-    const B = V[b];
-    const t = 0.17;
-    return {
-      x1: A.x + (B.x - A.x) * t,
-      y1: A.y + (B.y - A.y) * t,
-      x2: B.x - (B.x - A.x) * t,
-      y2: B.y - (B.y - A.y) * t,
-    };
-  });
-
-  const harborGeometry = (edge) => harborBadge(edge);
+  import { TERRAIN_LABELS, HARBOR_LABELS } from '$engine';
+  import { geometryFor } from './geometry.js';
 
   const pips = (n) => 6 - Math.abs(7 - n);
 
@@ -81,6 +53,7 @@
   } = $props();
 
   const board = $derived(view.board);
+  const G = $derived(geometryFor(board.layout));
   const buildings = $derived(preview ? [] : Object.entries(view.buildings ?? {}).map(([v, b]) => ({ v: Number(v), ...b })));
   const roads = $derived(preview ? [] : Object.entries(view.roads ?? {}).map(([e, owner]) => ({ e: Number(e), owner })));
 
@@ -109,7 +82,7 @@
   const isLight = (idx) => view.players?.[idx]?.color === 'almond';
 </script>
 
-<svg class="board" viewBox="-600 -520 1200 1040" preserveAspectRatio="xMidYMid meet" role="img" aria-label="The island">
+<svg class="board" viewBox={G.viewBoxAttr} preserveAspectRatio="xMidYMid meet" role="img" aria-label="The island">
   <defs>
     {#each Object.entries(TERRAIN_COLORS) as [terrain, [light, dark]] (terrain)}
       <linearGradient id="terrain-{terrain}" x1="0" y1="0" x2="1" y2="1">
@@ -131,12 +104,17 @@
   </defs>
 
   <!-- Sea -->
-  <polygon points={FRAME_POINTS} fill="url(#sea)" stroke="#134c5d" stroke-width="40" stroke-linejoin="round" />
-  <polygon points={FRAME_POINTS} fill="url(#waves)" />
+  {#if G.frame.kind === 'polygon'}
+    <polygon points={G.frame.points} fill="url(#sea)" stroke="#134c5d" stroke-width="40" stroke-linejoin="round" />
+    <polygon points={G.frame.points} fill="url(#waves)" />
+  {:else}
+    <rect x={G.frame.x} y={G.frame.y} width={G.frame.width} height={G.frame.height} rx={G.frame.rx} fill="url(#sea)" stroke="#134c5d" stroke-width="40" />
+    <rect x={G.frame.x} y={G.frame.y} width={G.frame.width} height={G.frame.height} rx={G.frame.rx} fill="url(#waves)" />
+  {/if}
 
   <!-- Harbors -->
   {#each board.harbors as harbor (harbor.edge)}
-    {@const g = harborGeometry(harbor.edge)}
+    {@const g = G.harbor(harbor.edge)}
     <g class="harbor">
       <title>{HARBOR_LABELS[harbor.type]}</title>
       <line x1={g.a.x} y1={g.a.y} x2={g.x} y2={g.y} class="pier" />
@@ -152,22 +130,22 @@
   {/each}
 
   <!-- Shoreline -->
-  {#each SHORE_POINTS as points, i (i)}
+  {#each G.shorePoints as points, i (i)}
     <polygon {points} class="shore" />
   {/each}
 
   <!-- Tiles -->
-  {#key board.seed}
+  {#key `${board.layout}:${board.seed}`}
     <g class="tiles" class:shuffling>
       {#each board.hexes as tile, i (i)}
-        {@const h = H[i]}
+        {@const h = G.H[i]}
         <g
           class="tile"
           class:glow={glowNumber !== null && tile.number === glowNumber && view.robber !== i}
           style="--delay: {h.ring * 90 + ((i * 37) % 60)}ms"
         >
           <title>{TERRAIN_LABELS[tile.terrain]}{tile.number ? ` · ${tile.number}` : ''}</title>
-          <polygon points={TILE_POINTS[i]} fill="url(#terrain-{tile.terrain})" class="tile-face" />
+          <polygon points={G.tilePoints[i]} fill="url(#terrain-{tile.terrain})" class="tile-face" />
           <g transform="translate({h.x} {h.y})" class="art">
             {#if tile.terrain === 'grove'}
               {#each TREES as [x, y, s] (`${x},${y}`)}
@@ -245,7 +223,7 @@
   <!-- Jackal destinations sit under the pieces so buildings stay crisp -->
   {#each targets.hexes as hex (hex)}
     <polygon
-      points={TILE_POINTS[hex]}
+      points={G.tilePoints[hex]}
       class="target-hex"
       data-hex={hex}
       role="button"
@@ -258,7 +236,7 @@
 
   <!-- The Jackal -->
   {#if view.robber != null && !preview}
-    {@const h = H[view.robber]}
+    {@const h = G.H[view.robber]}
     {@const hasNumber = board.hexes[view.robber].number != null}
     <g class="jackal" style="transform: translate({h.x + (hasNumber ? 44 : 0)}px, {h.y + (hasNumber ? 6 : 0)}px)" filter="url(#soft)">
       <title>The Jackal</title>
@@ -272,7 +250,7 @@
 
   <!-- Trails -->
   {#each roads as road (road.e)}
-    {@const s = EDGE_SEGMENTS[road.e]}
+    {@const s = G.edgeSegments[road.e]}
     <g class="road">
       <line x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2} class="road-under" />
       <line x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2} class="road-top" stroke={playerFill(road.owner)} />
@@ -281,7 +259,7 @@
 
   <!-- Homesteads & Kibbutzim -->
   {#each buildings as b (b.v)}
-    {@const p = V[b.v]}
+    {@const p = G.V[b.v]}
     <g transform="translate({p.x} {p.y})" filter="url(#soft)">
       <g class="building">
       <title>{view.players?.[b.owner]?.name}'s {b.kind === 'city' ? 'Kibbutz' : 'Homestead'}</title>
@@ -302,7 +280,7 @@
 
   <!-- Move targets -->
   {#each targets.edges as edge (edge)}
-    {@const s = EDGE_SEGMENTS[edge]}
+    {@const s = G.edgeSegments[edge]}
     <g
       class="target-edge"
       data-edge={edge}
@@ -318,7 +296,7 @@
     </g>
   {/each}
   {#each targets.vertices as vertex (vertex)}
-    {@const p = V[vertex]}
+    {@const p = G.V[vertex]}
     <g
       class="target-vertex"
       data-vertex={vertex}

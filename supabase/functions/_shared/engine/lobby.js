@@ -3,9 +3,7 @@
 // Every function returns a new state (or the same object when nothing changed).
 
 import {
-  BANK_PER_RESOURCE,
   DEFAULT_SETTINGS,
-  DEV_DECK_COUNTS,
   MAX_PLAYERS,
   MIN_PLAYERS,
   NAME_MAX_LENGTH,
@@ -18,6 +16,7 @@ import {
 import { checkVictory, makeEnv, resolveAbsent, startClock } from './actions.js';
 import { generateBoard } from './board.js';
 import { newChaosDeck } from './events.js';
+import { LAYOUT_IDS, layoutOf } from './layouts.js';
 import { GameError } from './errors.js';
 import { emptyHand } from './hand.js';
 import { P, log } from './log.js';
@@ -35,9 +34,11 @@ export function validateName(raw) {
 }
 
 export function normalizeSettings(input = {}) {
+  const layout = LAYOUT_IDS.includes(input.layout) ? input.layout : DEFAULT_SETTINGS.layout;
+  const cap = Math.min(MAX_PLAYERS, layoutOf(layout).maxPlayers);
   const maxPlayers = Number.isInteger(input.maxPlayers)
-    ? Math.min(MAX_PLAYERS, Math.max(MIN_PLAYERS, input.maxPlayers))
-    : DEFAULT_SETTINGS.maxPlayers;
+    ? Math.min(cap, Math.max(MIN_PLAYERS, input.maxPlayers))
+    : Math.min(cap, DEFAULT_SETTINGS.maxPlayers);
   const vpTarget = VP_TARGETS.includes(input.vpTarget) ? input.vpTarget : DEFAULT_SETTINGS.vpTarget;
   return {
     maxPlayers,
@@ -46,6 +47,7 @@ export function normalizeSettings(input = {}) {
     watchmanChoice: input.watchmanChoice === true,
     turnTimer: TURN_TIMERS.includes(input.turnTimer) ? input.turnTimer : 0,
     chaos: input.chaos === true,
+    layout,
   };
 }
 
@@ -61,6 +63,12 @@ export function updateSettings(state, userId, patch = {}) {
   }
   const s = structuredClone(state);
   s.settings = settings;
+  if (settings.layout !== (s.board.layout ?? 'classic')) {
+    // Same map number, new island shape.
+    s.board = generateBoard(s.board.seed, settings.layout);
+    s.robber = s.board.desert;
+    s.bank = Object.fromEntries(RESOURCES.map((r) => [r, layoutOf(settings.layout).bank]));
+  }
   return s;
 }
 
@@ -100,13 +108,14 @@ function requireHost(s, idx) {
 
 /** A fresh lobby with the host seated and a first island rolled. */
 export function createGame({ gameId, code, settings, seed, host, now }) {
-  const board = generateBoard(seed);
+  const tableSettings = normalizeSettings(settings);
+  const board = generateBoard(seed, tableSettings.layout);
   const s = {
     id: gameId,
     code,
     status: 'lobby',
     phase: 'lobby',
-    settings: normalizeSettings(settings),
+    settings: tableSettings,
     hostId: host.playerId,
     players: [],
     board,
@@ -114,7 +123,7 @@ export function createGame({ gameId, code, settings, seed, host, now }) {
     robber: board.desert,
     buildings: {},
     roads: {},
-    bank: Object.fromEntries(RESOURCES.map((r) => [r, BANK_PER_RESOURCE])),
+    bank: Object.fromEntries(RESOURCES.map((r) => [r, layoutOf(tableSettings.layout).bank])),
     devDeck: [],
     turn: null,
     lastRoll: null,
@@ -232,7 +241,7 @@ export function rerollMap(state, userId, seed) {
   requireLobby(state);
   requireHost(state, idx);
   const s = structuredClone(state);
-  s.board = generateBoard(seed);
+  s.board = generateBoard(seed, s.settings.layout);
   s.robber = s.board.desert;
   s.mapRolls += 1;
   return s;
@@ -281,9 +290,11 @@ export function startGame(state, userId, { rng, now }) {
   }
   const s = structuredClone(state);
   s.players = shuffle(rng, s.players);
+  const layout = layoutOf(s.settings.layout);
+  s.bank = Object.fromEntries(RESOURCES.map((r) => [r, layout.bank]));
   s.devDeck = shuffle(
     rng,
-    Object.entries(DEV_DECK_COUNTS).flatMap(([type, n]) => Array(n).fill(type)),
+    Object.entries(layout.devDeck).flatMap(([type, n]) => Array(n).fill(type)),
   );
   s.chaos = s.settings.chaos ? newChaosDeck(rng) : null;
   s.status = 'setup';

@@ -42,7 +42,7 @@ import {
   setupSeat,
   victoryPoints,
 } from './rules.js';
-import { EDGE_COUNT, HEX_COUNT, TOPOLOGY, VERTEX_COUNT } from './topology.js';
+import { topo } from './topology.js';
 
 // ---------------------------------------------------------------------------
 // Entry point
@@ -186,7 +186,7 @@ function pay(s, idx, cost) {
 
 function buildSettlement(s, actor, { vertex }, env) {
   requireCurrent(s, actor);
-  const v = requireIndex(vertex, VERTEX_COUNT, 'corner');
+  const v = requireIndex(vertex, topo(s).vertices.length, 'corner');
   const player = s.players[actor];
 
   if (s.phase === 'setup_settlement') {
@@ -199,7 +199,7 @@ function buildSettlement(s, actor, { vertex }, env) {
     const isSecondRound = s.turn.setupIndex >= s.players.length;
     if (isSecondRound) {
       const gained = emptyHand();
-      for (const hex of TOPOLOGY.vertices[v].hexes) {
+      for (const hex of topo(s).vertices[v].hexes) {
         const resource = TERRAIN_RESOURCE[s.board.hexes[hex].terrain];
         if (resource && s.bank[resource] > 0) gained[resource] += 1;
       }
@@ -229,7 +229,7 @@ function placeBuilding(s, idx, vertex, kind) {
 
 function buildRoad(s, actor, { edge }, env) {
   requireCurrent(s, actor);
-  const e = requireIndex(edge, EDGE_COUNT, 'path');
+  const e = requireIndex(edge, topo(s).edges.length, 'path');
   const player = s.players[actor];
 
   if (s.phase === 'setup_road') {
@@ -290,7 +290,7 @@ function advanceSetup(s, env) {
 function buildCity(s, actor, { vertex }) {
   requireCurrent(s, actor);
   requirePhase(s, 'main');
-  const v = requireIndex(vertex, VERTEX_COUNT, 'corner');
+  const v = requireIndex(vertex, topo(s).vertices.length, 'corner');
   const player = s.players[actor];
   const building = s.buildings[v];
   if (!building || building.owner !== actor || building.kind !== 'settlement') {
@@ -349,7 +349,7 @@ export function produce(s, total) {
   const gains = s.players.map(() => emptyHand());
   let guarded = null;
 
-  for (const hex of TOPOLOGY.hexes) {
+  for (const hex of topo(s).hexes) {
     const tile = s.board.hexes[hex.id];
     const resource = TERRAIN_RESOURCE[tile.terrain];
     if (tile.number !== total || !resource) continue;
@@ -411,7 +411,7 @@ function discard(s, actor, { resources }, env) {
 function moveRobber(s, actor, { hex, victim = null, resource = null }, env) {
   requireCurrent(s, actor);
   requirePhase(s, 'robber');
-  const h = requireIndex(hex, HEX_COUNT, 'tile');
+  const h = requireIndex(hex, topo(s).hexes.length, 'tile');
   // House rule: a Watchman names what it's after (a 7 still steals at random).
   const choosy = s.settings.watchmanChoice === true && s.turn.robberSource === 'watchman';
   if (choosy && resource != null && !isResource(resource)) throw new GameError('BAD_RESOURCE', 'Name a resource.');
@@ -848,8 +848,8 @@ function autoDiscard(s, idx, env) {
 }
 
 function autoMoveRobber(s, idx, env) {
-  const options = TOPOLOGY.hexes.map((h) => h.id).filter((h) => h !== s.robber);
-  const polite = options.filter((h) => !TOPOLOGY.hexes[h].vertices.some((v) => s.buildings[v]?.owner === idx));
+  const options = topo(s).hexes.map((h) => h.id).filter((h) => h !== s.robber);
+  const polite = options.filter((h) => !topo(s).hexes[h].vertices.some((v) => s.buildings[v]?.owner === idx));
   const hex = pick(env.rng, polite.length ? polite : options);
   const victims = robberVictims(s, idx, hex);
   moveRobber(s, idx, { hex, victim: victims.length ? pick(env.rng, victims) : null }, env);

@@ -5,6 +5,8 @@ export const PLAYER_COLORS = {
   cobalt: { fill: '#2f5fd6', ink: '#ffffff', label: 'Cobalt' },
   almond: { fill: '#f3e9d4', ink: '#2a2118', label: 'Almond' },
   fig: { fill: '#7b3fa1', ink: '#ffffff', label: 'Fig' },
+  citrus: { fill: '#f28c28', ink: '#2b2118', label: 'Citrus' },
+  teal: { fill: '#159aa0', ink: '#ffffff', label: 'Teal' },
 };
 
 export const colorOf = (player) => PLAYER_COLORS[player?.color]?.fill ?? '#888';

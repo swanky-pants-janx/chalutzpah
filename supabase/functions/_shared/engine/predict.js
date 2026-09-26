@@ -6,7 +6,7 @@
 import { simulateAction } from './actions.js';
 import { handSize } from './hand.js';
 import { victoryPoints } from './rules.js';
-import { HEX_COUNT } from './topology.js';
+import { topo } from './topology.js';
 
 const PREDICTABLE = new Set([
   'BUILD_ROAD',
@@ -70,7 +70,7 @@ function toShadow(pub, priv, me) {
 
 function moveJackalOnly(shadow, me, { hex }) {
   if (shadow.turn?.current !== me || shadow.phase !== 'robber') return null;
-  if (!Number.isInteger(hex) || hex < 0 || hex >= HEX_COUNT || hex === shadow.robber) return null;
+  if (!Number.isInteger(hex) || hex < 0 || hex >= topo(shadow).hexes.length || hex === shadow.robber) return null;
   const s = structuredClone(shadow);
   s.robber = hex;
   s.phase = s.turn.robberReturn ?? 'main';

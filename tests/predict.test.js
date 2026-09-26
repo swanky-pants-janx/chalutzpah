@@ -117,6 +117,7 @@ describe('optimistic move prediction', () => {
       [13, 2],
       [14, 4],
       [15, 4, { chaos: true, closeNeighbours: true, watchmanChoice: true }],
+      [16, 6, { layout: 'grand', maxPlayers: 6, chaos: true }],
     ]) {
       const counts = await checkGame(seed, players, settings);
       totals.games = (totals.games ?? 0) + 1;
