@@ -1,8 +1,8 @@
 <script>
-  import { COSTS, DEV_CARD_LABELS, EVENTS } from '$engine';
+  import { COSTS, DEV_CARD_LABELS, EVENTS, eventIdsFor } from '$engine';
   import Bundle from '../ui/Bundle.svelte';
   import Modal from '../ui/Modal.svelte';
-  import { ACHIEVEMENT_TEXT, CARD_ORDER, CARD_TEXT, HOUSE_RULES } from '../../game/cards.js';
+  import { ACHIEVEMENT_TEXT, CARD_ORDER, HOUSE_RULES, OASIS_TEXT, cardText } from '../../game/cards.js';
 
   let { onclose, settings = null } = $props();
   const activeRules = $derived(HOUSE_RULES.filter((rule) => settings?.[rule.key]));
@@ -27,12 +27,19 @@
       </section>
     {/if}
 
+    {#if settings?.oasis}
+      <section class="house">
+        <h3>Oasis mode is on</h3>
+        <p>{OASIS_TEXT}</p>
+      </section>
+    {/if}
+
     {#if settings?.chaos}
       <section class="house">
         <h3>Chaos mode is on</h3>
         <p>At the start of every round a new event card flips and lasts until the next one:</p>
         <ul>
-          {#each Object.values(EVENTS) as event (event.name)}
+          {#each eventIdsFor(settings).map((id) => EVENTS[id]) as event (event.name)}
             <li><b>{event.name}</b> — {event.text}</li>
           {/each}
         </ul>
@@ -73,6 +80,7 @@
       </table>
     </section>
 
+    {#if !settings?.oasis}
     <section>
       <h3>Roll a 7: the Jackal</h3>
       <p>
@@ -80,12 +88,13 @@
         tile — it blocks that tile's harvest — and snatches a random card from a neighbour there.
       </p>
     </section>
+    {/if}
 
     <section>
       <h3>Chutzpah cards</h3>
       <ul>
         {#each CARD_ORDER as card (card)}
-          <li><b>{DEV_CARD_LABELS[card]}</b> — {CARD_TEXT[card]}</li>
+          <li><b>{DEV_CARD_LABELS[card]}</b> — {cardText(card, settings)}</li>
         {/each}
       </ul>
     </section>

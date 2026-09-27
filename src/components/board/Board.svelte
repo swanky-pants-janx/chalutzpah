@@ -54,6 +54,8 @@
 
   const board = $derived(view.board);
   const G = $derived(geometryFor(board.layout));
+  // Oasis mode: the Dunes are an Oasis that pays out on a 7.
+  const oasis = $derived(view.settings?.oasis === true);
   const buildings = $derived(preview ? [] : Object.entries(view.buildings ?? {}).map(([v, b]) => ({ v: Number(v), ...b })));
   const roads = $derived(preview ? [] : Object.entries(view.roads ?? {}).map(([e, owner]) => ({ e: Number(e), owner })));
 
@@ -90,6 +92,10 @@
         <stop offset="1" stop-color={dark} />
       </linearGradient>
     {/each}
+    <linearGradient id="terrain-oasis" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e6e7a8" />
+      <stop offset="1" stop-color="#b9d38a" />
+    </linearGradient>
     <radialGradient id="sea" cx="50%" cy="45%" r="65%">
       <stop offset="0" stop-color="#2f93ad" />
       <stop offset="0.7" stop-color="#1d6a80" />
@@ -144,8 +150,8 @@
           class:glow={glowNumber !== null && tile.number === glowNumber && view.robber !== i}
           style="--delay: {h.ring * 90 + ((i * 37) % 60)}ms"
         >
-          <title>{TERRAIN_LABELS[tile.terrain]}{tile.number ? ` · ${tile.number}` : ''}</title>
-          <polygon points={G.tilePoints[i]} fill="url(#terrain-{tile.terrain})" class="tile-face" />
+          <title>{oasis && tile.terrain === 'dunes' ? 'Oasis · pays out on a 7' : `${TERRAIN_LABELS[tile.terrain]}${tile.number ? ` · ${tile.number}` : ''}`}</title>
+          <polygon points={G.tilePoints[i]} fill="url(#terrain-{oasis && tile.terrain === 'dunes' ? 'oasis' : tile.terrain})" class="tile-face" />
           <g transform="translate({h.x} {h.y})" class="art">
             {#if tile.terrain === 'grove'}
               {#each TREES as [x, y, s] (`${x},${y}`)}
@@ -194,6 +200,15 @@
                   <path d="M12 -20 L20 -2 L6 4 Z" fill="#c9cfd6" opacity="0.6" />
                 </g>
               {/each}
+            {:else if tile.terrain === 'dunes' && oasis}
+              <ellipse cx="0" cy="30" rx="58" ry="26" fill="#2f93ad" stroke="#8cc6a0" stroke-width="7" />
+              <path d="M-34 26 Q-16 18 2 26 M8 36 Q24 28 40 36" stroke="#bfe8f2" stroke-width="3.5" fill="none" stroke-linecap="round" />
+              {#each [[-50, -26, 1], [48, -30, 0.9], [4, -58, 0.75]] as [x, y, s] (`${x},${y}`)}
+                <g transform="translate({x} {y}) scale({s})">
+                  <path d="M0 26 Q4 0 0 -24" stroke="#7a5230" stroke-width="5" fill="none" stroke-linecap="round" />
+                  <path d="M0 -24 Q-22 -32 -32 -14 M0 -24 Q-14 -40 -30 -36 M0 -24 Q18 -40 32 -30 M0 -24 Q22 -28 30 -10 M0 -24 Q2 -44 12 -46" stroke="#2f7a45" stroke-width="6" fill="none" stroke-linecap="round" />
+                </g>
+              {/each}
             {:else if tile.terrain === 'dunes'}
               <circle cx="36" cy="-40" r="15" fill="#f6c95c" opacity="0.9" />
               <path d="M-72 30 Q-30 4 8 28 T74 24" stroke="#c9a65e" stroke-width="6" fill="none" stroke-linecap="round" />
@@ -204,6 +219,12 @@
               </g>
             {/if}
           </g>
+          {#if oasis && tile.terrain === 'dunes'}
+            <g class="token oasis-token" transform="translate({h.x} {h.y - 4})">
+              <circle r="27" class="token-disc" />
+              <text y="8" class="token-number">7</text>
+            </g>
+          {/if}
           {#if tile.number}
             <g class="token" class:hot={tile.number === 6 || tile.number === 8} transform="translate({h.x} {h.y})">
               <circle r="31" class="token-disc" />
@@ -377,6 +398,16 @@
   .token.hot .token-number,
   .token.hot .pip {
     fill: #b3263e;
+  }
+
+  .oasis-token .token-disc {
+    fill: #e3f5f2;
+    stroke: #2f93ad;
+    stroke-width: 4;
+  }
+
+  .oasis-token .token-number {
+    fill: #1d6a80;
   }
 
   .pier {

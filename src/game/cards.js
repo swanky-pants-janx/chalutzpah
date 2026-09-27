@@ -8,6 +8,14 @@ export const CARD_TEXT = {
   chutzpah: 'Name a resource. Every other player hands you all of theirs. It takes nerve.',
 };
 
+/** Card text for this table: in oasis mode there is no Jackal to move. */
+export function cardText(type, settings) {
+  if (type === 'watchman' && settings?.oasis) {
+    return 'Take a card from any player you choose. Call three to contend for the Night Watch.';
+  }
+  return CARD_TEXT[type];
+}
+
 export const CARD_ORDER = ['watchman', 'pathfinder', 'harvest', 'chutzpah', 'landmark'];
 
 export const ACHIEVEMENT_TEXT = {
@@ -34,4 +42,12 @@ export const MODES = [
     name: 'Chaos mode',
     text: 'A new event card every round: droughts, market days, sandstorms, caravans…',
   },
+  {
+    key: 'oasis',
+    name: 'Oasis mode',
+    text: 'No Jackal. The Dunes become an Oasis, and a 7 is Oasis Day: no discards, the roller draws a free Chutzpah card, and everyone touching the Oasis picks a resource. Watchmen take a card from any player.',
+  },
 ];
+
+export const OASIS_TEXT =
+  'There is no Jackal. The Dunes are an Oasis. Rolling a 7 is Oasis Day: nobody discards, the roller draws a free Chutzpah card (playable from their next turn), and everyone with a homestead or kibbutz touching an Oasis picks one resource from the supply for each Oasis they touch. A Watchman takes a card from any player you choose.';

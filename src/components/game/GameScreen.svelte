@@ -9,6 +9,7 @@
   import BuildCard from './BuildCard.svelte';
   import DiscardDialog from './DiscardDialog.svelte';
   import EventCard from './EventCard.svelte';
+  import OasisDialog from './OasisDialog.svelte';
   import EventLog from './EventLog.svelte';
   import GameOverDialog from './GameOverDialog.svelte';
   import HandBar from './HandBar.svelte';
@@ -105,6 +106,21 @@
     else run({ type: 'MOVE_ROBBER', hex, victim });
   }
 
+  // Oasis mode: a Watchman visits any player you choose (there is no Jackal).
+  function playOasisWatchman() {
+    const targets = view.players.map((_, i) => i).filter((i) => i !== view.me && view.players[i].resourceCount > 0);
+    if (targets.length === 0) run({ type: 'PLAY_DEV_CARD', card: 'watchman', victim: null });
+    else dialog = { watchmanVictims: targets };
+  }
+
+  function pickWatchmanVictim(victim) {
+    if (view.settings?.watchmanChoice) dialog = { watchmanAsk: true, victim, viaCard: true };
+    else {
+      dialog = null;
+      run({ type: 'PLAY_DEV_CARD', card: 'watchman', victim });
+    }
+  }
+
   function pickVictim(victim) {
     const { hex } = dialog;
     dialog = null;
@@ -112,15 +128,17 @@
   }
 
   function nameResource([resource]) {
-    const { hex, victim } = dialog;
+    const { hex, victim, viaCard } = dialog;
     dialog = null;
-    run({ type: 'MOVE_ROBBER', hex, victim, resource });
+    if (viaCard) run({ type: 'PLAY_DEV_CARD', card: 'watchman', victim, resource });
+    else run({ type: 'MOVE_ROBBER', hex, victim, resource });
   }
 
   // ------------------------------------------------------------ cards & trades
 
   function playCard(card) {
     if (card === 'harvest' || card === 'chutzpah') dialog = card;
+    else if (card === 'watchman' && view.settings?.oasis) playOasisWatchman();
     else run({ type: 'PLAY_DEV_CARD', card });
   }
 
@@ -157,7 +175,11 @@
   const skippable = $derived.by(() => {
     if (!controls?.inGame || view.status === 'finished') return [];
     const blocking =
-      view.phase === 'discard' ? Object.keys(view.pendingDiscards).map(Number) : [view.turn.current];
+      view.phase === 'discard'
+        ? Object.keys(view.pendingDiscards).map(Number)
+        : view.phase === 'oasis'
+          ? Object.keys(view.pendingOasis ?? {}).map(Number)
+          : [view.turn.current];
     return blocking
       .filter((i) => i !== view.me)
       .map((i) => view.players[i])
@@ -171,7 +193,7 @@
     const timer = setInterval(() => {
       const deadline = view?.turn?.deadline;
       if (!deadline || !controls?.inGame) return;
-      const blocking = controls.myTurn || controls.mustDiscard > 0;
+      const blocking = controls.myTurn || controls.mustDiscard > 0 || controls.mustPickOasis > 0;
       if (table.serverNow() - deadline < (blocking ? 300 : 3000)) return;
       if (lastTimeout.deadline === deadline && Date.now() - lastTimeout.at < 2500) return;
       lastTimeout = { deadline, at: Date.now() };
@@ -197,8 +219,9 @@
     achievement: 'victory',
     discard: 'card',
     event: 'card',
+    oasis: 'turn',
   };
-  const SOUND_PRIORITY = ['victory', 'roll', 'achievement', 'event', 'jackal', 'steal', 'build', 'trade', 'card', 'discard'];
+  const SOUND_PRIORITY = ['victory', 'roll', 'achievement', 'event', 'oasis', 'jackal', 'steal', 'build', 'trade', 'card', 'discard'];
 
   let heardSeq = null;
   $effect(() => {
@@ -223,7 +246,7 @@
   });
 
   $effect(() => {
-    const prefix = view.status === 'finished' ? '🏁 ' : controls?.myTurn || controls?.mustDiscard ? '● Your move — ' : '';
+    const prefix = view.status === 'finished' ? '🏁 ' : controls?.myTurn || controls?.mustDiscard || controls?.mustPickOasis ? '● Your move — ' : '';
     document.title = `${prefix}Chalutzpah · ${view.code}`;
   });
 
@@ -343,10 +366,13 @@
         </div>
       {/if}
       {#if rollShow}
-        <div class="roll-banner" class:seven={rollShow.total === 7}>
+        <div class="roll-banner" class:seven={rollShow.total === 7 && !view.settings?.oasis} class:oasis-day={rollShow.total === 7 && view.settings?.oasis}>
           <Die value={rollShow.dice[0]} rolling size={64} />
           <Die value={rollShow.dice[1]} rolling size={64} tone="red" />
-          <span class="roll-text"><small>{rollShow.name} rolled</small>{rollShow.total}</span>
+          <span class="roll-text">
+            <small>{rollShow.name} rolled</small>{rollShow.total}
+            {#if rollShow.total === 7 && view.settings?.oasis}<small class="oasis-label">Oasis Day!</small>{/if}
+          </span>
         </div>
       {/if}
       {#if houseRules.length}
@@ -398,6 +424,10 @@
 
 <ProductionFlights {view} />
 
+{#if controls?.mustPickOasis}
+  <OasisDialog need={controls.mustPickOasis} supply={view.bank} {busy} onconfirm={(resources) => run({ type: 'OASIS_PICK', resources })} />
+{/if}
+
 {#if controls?.mustDiscard}
   <DiscardDialog need={controls.mustDiscard} hand={controls.player.resources} {busy} onconfirm={(resources) => run({ type: 'DISCARD', resources })} />
 {/if}
@@ -426,6 +456,16 @@
   />
 {:else if dialog === 'rules'}
   <RulesDialog settings={view.settings} onclose={() => (dialog = null)} />
+{:else if dialog?.watchmanVictims}
+  <VictimDialog
+    {view}
+    victims={dialog.watchmanVictims}
+    {busy}
+    title="Who does your Watchman visit?"
+    text="Pick a player — your Watchman takes a card from them."
+    onpick={pickWatchmanVictim}
+    onclose={() => (dialog = null)}
+  />
 {:else if dialog?.watchmanAsk}
   <PickResourcesDialog
     title="What is your Watchman after?"
@@ -569,6 +609,17 @@
 
   .roll-banner.seven {
     background: rgba(120, 22, 38, 0.92);
+  }
+
+  .roll-banner.oasis-day {
+    background: rgba(24, 110, 104, 0.94);
+  }
+
+  .roll-text .oasis-label {
+    margin: 6px 0 0;
+    color: #d9f5ea;
+    font-size: 0.95rem;
+    font-weight: 800;
   }
 
   .roll-text {

@@ -2,7 +2,7 @@
 
 *chalutz* (pioneer) + *chutzpah* (nerve). A browser-based, multiplayer hex-settling board game for friends: host a table, share a 5-letter code on Discord, roll the island until you like it, and race to 10 points.
 
-**Features:** realtime play for 2–6, instant moves, a Classic (19-tile) or Grand (30-tile) island, shareable map numbers, house rules, an optional turn timer, Chaos mode event cards, rematches, and rich invite links that unfurl in Discord with a picture of your island.
+**Features:** realtime play for 2–6, instant moves, a Classic (19-tile) or Grand (30-tile) island, shareable map numbers, house rules, an optional turn timer, Chaos mode event cards, Oasis mode (no Jackal), rematches, and rich invite links that unfurl in Discord with a picture of your island.
 
 It follows the classic hex/resource/trading structure with original names, art, rules text and UI:
 
@@ -78,6 +78,7 @@ Set by the host in the lobby, and visible to everyone there:
 - **Points to win:** 8, 10 or 12.
 - **Turn timer:** off, 60 s, 90 s, 2 min or 3 min. The server stores the deadline. When it passes, any browser can call time, and the server checks its own clock, then finishes the turn minimally (roll, auto-discard, move the Jackal) and passes it. Nothing is built or traded for the player.
 - **Chaos mode:** a new event card every round from an original 15-card deck (`engine/events.js`): droughts and booms, Market Day, Calm Night, Caravan, Sandstorm, Tithe, Windfall, Shifting Sands and more.
+- **Oasis mode:** there is no Jackal, and the Dunes become an Oasis. A 7 is *Oasis Day*: nobody discards, the roller draws a free Chutzpah card, and everyone touching an Oasis picks one resource per Oasis they touch. A Watchman takes a card from any player you choose. Chaos mode leaves out the Jackal events.
 - **House rules:** *Close neighbours* lets homesteads sit one trail apart. *Choosy Watchman* means a Watchman names a resource: you take it if the victim has one, otherwise a random card.
 
 After a game, **Rematch** opens a new lobby with the same settings, where everyone keeps their name and colour.
@@ -125,7 +126,7 @@ tests/                       engine, server, UI-logic and database tests
 ## Tests
 
 ```bash
-npm test                     # 167 tests, ~5s
+npm test                     # 187 tests, ~6s
 SIM_GAMES=300 npm test       # plus 300 extra full bot games as a stress test
 ```
 

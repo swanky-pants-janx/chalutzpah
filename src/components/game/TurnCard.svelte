@@ -32,7 +32,7 @@
       <Die value={dice[0]} {rolling} size={42} />
       <Die value={dice[1]} {rolling} size={42} tone="red" />
       {#if view.lastRoll}
-        <span class="total" class:seven={view.lastRoll.total === 7}>{view.lastRoll.total}</span>
+        <span class="total" class:seven={view.lastRoll.total === 7 && !view.settings?.oasis} class:oasis-day={view.lastRoll.total === 7 && view.settings?.oasis}>{view.lastRoll.total}</span>
       {/if}
     </div>
     <div class="actions">
@@ -130,6 +130,10 @@
 
   .total.seven {
     color: var(--pomegranate);
+  }
+
+  .total.oasis-day {
+    color: #1d8a80;
   }
 
   .actions {

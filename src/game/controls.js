@@ -85,6 +85,7 @@ export function getControls(view, mode = null) {
     canTrade: main,
     costs,
     mustDiscard: view.pendingDiscards?.[me] ?? 0,
+    mustPickOasis: view.pendingOasis?.[me] ?? 0,
     rates: Object.fromEntries(RESOURCES.map((r) => [r, bankRate(view, me, r)])),
   };
 }
@@ -110,6 +111,12 @@ export function describeTurn(view, controls) {
   }
 
   const waitingFor = Object.keys(view.pendingDiscards ?? {}).map((i) => view.players[i]?.name);
+  const atOasis = Object.keys(view.pendingOasis ?? {}).map((i) => view.players[i]?.name);
+  if (view.phase === 'oasis') {
+    return controls?.mustPickOasis
+      ? { title: 'Oasis Day!', hint: `Pick ${controls.mustPickOasis} resource${controls.mustPickOasis === 1 ? '' : 's'} from the supply.` }
+      : { title: 'Oasis Day!', hint: `Waiting for ${atOasis.join(', ')} to pick at the Oasis…` };
+  }
 
   if (controls?.myTurn) {
     const secondRound = view.turn.setupIndex >= view.players.length;
@@ -126,7 +133,7 @@ export function describeTurn(view, controls) {
       case 'roll':
         return {
           title: 'Your turn — roll!',
-          hint: controls.playable.has('watchman') ? 'You may call a Watchman before rolling.' : 'Press Roll or hit R.',
+          hint: controls.playable.has('watchman') ? 'You may call a Watchman before rolling.' : view.settings?.oasis ? 'Press Roll or hit R — a 7 means Oasis Day!' : 'Press Roll or hit R.',
         };
       case 'discard':
         return controls.mustDiscard

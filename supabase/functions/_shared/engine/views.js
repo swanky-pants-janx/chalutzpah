@@ -23,6 +23,7 @@ export function publicView(s) {
     turn: s.turn,
     lastRoll: s.lastRoll,
     pendingDiscards: s.pendingDiscards,
+    pendingOasis: s.pendingOasis ?? {},
     trades: s.trades,
     nextTradeId: s.nextTradeId,
     // Random ids of the latest applied actions, so a client can tell when its

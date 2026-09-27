@@ -138,6 +138,7 @@ const HANDLERS = {
   END_TURN: endTurn,
   FORCE_SKIP: forceSkip,
   TIMEOUT: timeout,
+  OASIS_PICK: oasisPick,
 };
 
 // ---------------------------------------------------------------------------
@@ -149,6 +150,7 @@ function requireCurrent(s, idx) {
 }
 
 const PHASE_HINTS = {
+  oasis: 'Waiting for everyone at the Oasis to pick.',
   setup_settlement: 'Place your starting homestead first.',
   setup_road: 'Place the trail next to your new homestead first.',
   roll: 'Roll the dice first.',
@@ -317,6 +319,11 @@ function rollDice(s, actor, _action, env) {
   log(s, [P(s, actor), ' rolled ', { dice }], 'roll');
   s.lastRoll = { player: actor, dice, total, seq: s.logSeq };
 
+  if (total === 7 && s.settings.oasis) {
+    oasisDay(s, actor, env);
+    return;
+  }
+
   if (total === 7) {
     const pending = {};
     const calm = currentEvent(s)?.noDiscard === true;
@@ -430,27 +437,96 @@ function moveRobber(s, actor, { hex, victim = null, resource = null }, env) {
   const where = tile.number ? `${TERRAIN_LABELS[tile.terrain]} (${tile.number})` : TERRAIN_LABELS[tile.terrain];
   log(s, [P(s, actor), ` sent the Jackal to the ${where}.`], 'jackal');
 
-  if (victims.length > 0) {
-    const hand = s.players[victim].resources;
-    const named = choosy ? resource : null;
-    const found = named !== null && hand[named] > 0;
-    let stolen = named;
-    if (!found) {
-      const cards = handToList(hand);
-      stolen = cards[randomInt(env.rng, cards.length)];
-    }
-    hand[stolen] -= 1;
-    s.players[actor].resources[stolen] += 1;
-    log(s, [P(s, actor), ' snatched a card from ', P(s, victim), '.'], 'steal');
-    if (named === null) whisper(s, actor, ['You snatched ', { res: stolen }, ' from ', P(s, victim), '.']);
-    else if (found) whisper(s, actor, ['Your Watchman found ', { res: stolen }, ' at ', P(s, victim), "'s."]);
-    else whisper(s, actor, [P(s, victim), ' had no ', { res: named }, ' — your Watchman grabbed ', { res: stolen }, ' instead.']);
-    whisper(s, victim, [P(s, actor), ' snatched your ', { res: stolen }, '.']);
-  }
+  if (victims.length > 0) steal(s, actor, victim, choosy ? resource : null, env);
 
   s.phase = s.turn.robberReturn ?? 'main';
   s.turn.robberReturn = null;
   s.turn.robberSource = null;
+}
+
+/**
+ * Take one card from `victim`: the named resource if the Choosy Watchman rule
+ * applies and they have one, otherwise a random card. The public log never
+ * says what was taken.
+ */
+function steal(s, actor, victim, named, env) {
+  const hand = s.players[victim].resources;
+  const found = named !== null && hand[named] > 0;
+  let stolen = named;
+  if (!found) {
+    const cards = handToList(hand);
+    stolen = cards[randomInt(env.rng, cards.length)];
+  }
+  hand[stolen] -= 1;
+  s.players[actor].resources[stolen] += 1;
+  log(s, [P(s, actor), ' snatched a card from ', P(s, victim), '.'], 'steal');
+  if (named === null) whisper(s, actor, ['You snatched ', { res: stolen }, ' from ', P(s, victim), '.']);
+  else if (found) whisper(s, actor, ['Your Watchman found ', { res: stolen }, ' at ', P(s, victim), "'s."]);
+  else whisper(s, actor, [P(s, victim), ' had no ', { res: named }, ' — your Watchman grabbed ', { res: stolen }, ' instead.']);
+  whisper(s, victim, [P(s, actor), ' snatched your ', { res: stolen }, '.']);
+}
+
+// ---------------------------------------------------------------------------
+// Oasis mode: no Jackal, and a 7 is Oasis Day
+// ---------------------------------------------------------------------------
+
+const oasisTiles = (s) => topo(s).hexes.filter((h) => s.board.hexes[h.id].terrain === 'dunes');
+
+/**
+ * Oasis Day: nobody discards, the roller draws a free Chutzpah card, and
+ * everyone touching an Oasis picks one resource per Oasis they touch.
+ */
+function oasisDay(s, actor, env) {
+  log(s, ['Oasis Day! The pioneers gather at the water.'], 'oasis');
+  if (s.devDeck.length > 0) {
+    const type = s.devDeck.pop();
+    s.players[actor].devCards.push({ type, boughtTurn: s.turn.number });
+    log(s, [P(s, actor), ' draws a free Chutzpah card.'], 'card');
+    whisper(s, actor, [`Oasis Day brought you ${DEV_CARD_LABELS[type]}.`]);
+  } else {
+    log(s, ['The Chutzpah deck is empty — no free card this time.'], 'info');
+  }
+
+  const oases = oasisTiles(s);
+  const pending = {};
+  let supply = handSize(s.bank);
+  s.players.forEach((_, i) => {
+    const touching = oases.filter((hex) => hex.vertices.some((v) => s.buildings[v]?.owner === i)).length;
+    const n = Math.min(touching, supply);
+    if (n > 0) {
+      pending[i] = n;
+      supply -= n;
+    }
+  });
+  s.pendingOasis = pending;
+  if (Object.keys(pending).length > 0) {
+    s.phase = 'oasis';
+    extendClock(s, env, DISCARD_GRACE_MS);
+  } else {
+    s.phase = 'main';
+  }
+}
+
+function oasisPick(s, actor, { resources }) {
+  if (s.phase !== 'oasis') throw new GameError('WRONG_PHASE', 'Nobody is at the Oasis right now.');
+  const need = s.pendingOasis?.[actor];
+  if (!need) throw new GameError('NOTHING_TO_PICK', 'You have nothing to collect at the Oasis.');
+  const bundle = parseBundle(resources);
+  if (handSize(bundle) !== need) throw new GameError('BAD_PICK', `Pick exactly ${need} resource${need === 1 ? '' : 's'}.`);
+  if (!hasAll(s.bank, bundle)) throw new GameError('SUPPLY_EMPTY', 'The supply has run out of that.');
+  transfer(s.bank, s.players[actor].resources, bundle);
+  delete s.pendingOasis[actor];
+  log(s, [P(s, actor), ' gathered ', B(bundle), ' at the Oasis.'], 'gain');
+  if (Object.keys(s.pendingOasis).length === 0) s.phase = 'main';
+}
+
+function autoOasisPick(s, idx, env) {
+  const bundle = emptyHand();
+  for (let k = 0; k < s.pendingOasis[idx]; k++) {
+    const available = RESOURCES.filter((r) => s.bank[r] - bundle[r] > 0);
+    bundle[available[randomInt(env.rng, available.length)]] += 1;
+  }
+  oasisPick(s, idx, { resources: bundle });
 }
 
 // ---------------------------------------------------------------------------
@@ -468,7 +544,7 @@ function buyDevCard(s, actor) {
   whisper(s, actor, [`You drew ${DEV_CARD_LABELS[type]}.`]);
 }
 
-function playDevCard(s, actor, action) {
+function playDevCard(s, actor, action, env) {
   requireCurrent(s, actor);
   const card = action.card;
   if (card === 'landmark') throw new GameError('BAD_CARD', 'Landmarks score on their own — keep them secret!');
@@ -489,6 +565,20 @@ function playDevCard(s, actor, action) {
 
   switch (card) {
     case 'watchman': {
+      if (s.settings.oasis) {
+        // No Jackal: the Watchman calls on any player you choose.
+        const targets = s.players.map((_, i) => i).filter((i) => i !== actor && handSize(s.players[i].resources) > 0);
+        const victim = action.victim ?? null;
+        if (targets.length > 0 && !targets.includes(victim)) throw new GameError('PICK_VICTIM', 'Choose who your Watchman visits.');
+        if (targets.length === 0 && victim !== null) throw new GameError('BAD_VICTIM', 'Nobody has anything to take.');
+        const named = s.settings.watchmanChoice ? (action.resource ?? null) : null;
+        if (named !== null && !isResource(named)) throw new GameError('BAD_RESOURCE', 'Name a resource.');
+        player.knightsPlayed += 1;
+        log(s, [P(s, actor), ' called a Watchman.'], 'card');
+        if (victim !== null) steal(s, actor, victim, named, env);
+        updateLargestArmy(s, actor);
+        break;
+      }
       player.knightsPlayed += 1;
       s.turn.robberReturn = s.phase;
       s.turn.robberSource = 'watchman';
@@ -682,6 +772,10 @@ function timeout(s, actor, _action, env) {
       for (const i of Object.keys(s.pendingDiscards).map(Number)) autoDiscard(s, i, env);
       continue;
     }
+    if (s.phase === 'oasis') {
+      for (const i of Object.keys(s.pendingOasis).map(Number)) autoOasisPick(s, i, env);
+      continue;
+    }
     if (turnMark(s) !== mark) return;
     switch (s.phase) {
       case 'setup_settlement':
@@ -800,6 +894,12 @@ export function resolveAbsent(s, absent, env) {
       const waiting = Object.keys(s.pendingDiscards).map(Number).filter((i) => absent.has(i));
       if (waiting.length === 0) return;
       for (const i of waiting) autoDiscard(s, i, env);
+      continue;
+    }
+    if (s.phase === 'oasis') {
+      const waiting = Object.keys(s.pendingOasis).map(Number).filter((i) => absent.has(i));
+      if (waiting.length === 0) return;
+      for (const i of waiting) autoOasisPick(s, i, env);
       continue;
     }
 

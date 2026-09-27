@@ -20,6 +20,7 @@ const PREDICTABLE = new Set([
   'DISCARD',
   'PLAY_DEV_CARD',
   'MOVE_ROBBER',
+  'OASIS_PICK',
 ]);
 
 /**
@@ -94,6 +95,7 @@ function toViews(pub, priv, s, me) {
       trades: s.trades,
       nextTradeId: s.nextTradeId,
       pendingDiscards: s.pendingDiscards,
+      pendingOasis: s.pendingOasis ?? {},
       achievements: s.achievements,
       roadLengths: s.roadLengths,
       lastRoll: s.lastRoll,

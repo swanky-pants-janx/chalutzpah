@@ -13,7 +13,7 @@ import {
 } from '../supabase/functions/_shared/engine/index.js';
 import { createHandler } from '../supabase/functions/_shared/server/handler.js';
 import { createMemoryStore } from '../supabase/functions/_shared/server/memory-store.js';
-import { decide } from './bots.js';
+import { decide, oasisPick } from './bots.js';
 
 function shape(pub, priv, me) {
   return {
@@ -26,6 +26,7 @@ function shape(pub, priv, me) {
     bank: pub.bank,
     trades: pub.trades,
     pendingDiscards: pub.pendingDiscards,
+    pendingOasis: pub.pendingOasis,
     achievements: pub.achievements,
     roadLengths: pub.roadLengths,
     players: pub.players.map((p, i) => ({
@@ -66,6 +67,9 @@ async function checkGame(seed, players, settings = {}) {
         const r = cards.splice(Math.floor(rng() * cards.length), 1)[0];
         action.resources[r] = (action.resources[r] ?? 0) + 1;
       }
+    } else if (s.phase === 'oasis') {
+      actor = Number(Object.keys(s.pendingOasis)[0]);
+      action = oasisPick(s, actor, rng);
     } else if (s.phase === 'main' && s.trades.length && rng() < 0.6) {
       const trade = s.trades[0];
       if (rng() < 0.3) {
@@ -118,6 +122,7 @@ describe('optimistic move prediction', () => {
       [14, 4],
       [15, 4, { chaos: true, closeNeighbours: true, watchmanChoice: true }],
       [16, 6, { layout: 'grand', maxPlayers: 6, chaos: true }],
+      [17, 4, { oasis: true, closeNeighbours: true }],
     ]) {
       const counts = await checkGame(seed, players, settings);
       totals.games = (totals.games ?? 0) + 1;
@@ -128,7 +133,7 @@ describe('optimistic move prediction', () => {
     for (const type of ['BUILD_ROAD', 'BUILD_SETTLEMENT', 'BUILD_CITY', 'BANK_TRADE', 'OFFER_TRADE', 'CANCEL_TRADE', 'DECLINE_TRADE', 'END_TURN', 'DISCARD', 'MOVE_ROBBER', 'PLAY_DEV_CARD']) {
       expect(totals[type] ?? 0, `${type} predictions`).toBeGreaterThan(0);
     }
-  });
+  }, 60_000); // replays several full games
 
   it('refuses to predict anything that needs dice, hidden cards or other hands', () => {
     const pub = { status: 'playing', players: [{ id: 'p0' }], log: [], trades: [] };

@@ -64,6 +64,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   watchmanChoice: false, // a Watchman names the resource it takes
   turnTimer: 0, // seconds per turn; 0 = no timer
   chaos: false, // chaos mode: a new event card every round
+  oasis: false, // oasis mode: no Jackal; a 7 is Oasis Day
   layout: 'classic', // 'classic' (19 tiles, 2–4) or 'grand' (30 tiles, up to 6)
 });
 

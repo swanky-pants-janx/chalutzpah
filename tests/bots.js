@@ -14,8 +14,26 @@ import {
   robberVictims,
 } from '../supabase/functions/_shared/engine/index.js';
 
-export /** Decide one action for player `i` given the full state (bots are trusted test code). */
-function decide(s, i, rng) {
+/** In oasis mode a Watchman visits a player instead of moving the Jackal. */
+function watchman(s, i, rng) {
+  if (!s.settings.oasis) return { type: 'PLAY_DEV_CARD', card: 'watchman' };
+  const targets = s.players.map((_, j) => j).filter((j) => j !== i && Object.values(s.players[j].resources).some((n) => n > 0));
+  return { type: 'PLAY_DEV_CARD', card: 'watchman', victim: targets.length ? pick(rng, targets) : null, resource: pick(rng, RESOURCES) };
+}
+
+/** Oasis Day: pick random resources the supply still has. */
+export function oasisPick(s, i, rng) {
+  const bundle = {};
+  for (let k = 0; k < s.pendingOasis[i]; k++) {
+    const available = RESOURCES.filter((r) => s.bank[r] - (bundle[r] ?? 0) > 0);
+    const r = pick(rng, available);
+    bundle[r] = (bundle[r] ?? 0) + 1;
+  }
+  return { type: 'OASIS_PICK', resources: bundle };
+}
+
+/** Decide one action for player `i` given the full state (bots are trusted test code). */
+export function decide(s, i, rng) {
   const me = s.players[i];
   switch (s.phase) {
     case 'setup_settlement':
@@ -23,7 +41,7 @@ function decide(s, i, rng) {
     case 'setup_road':
       return { type: 'BUILD_ROAD', edge: pick(rng, legalRoadEdges(s, i, { fromVertex: s.turn.setupVertex })) };
     case 'roll':
-      if (playableDevCards(s, i).includes('watchman') && rng() < 0.5) return { type: 'PLAY_DEV_CARD', card: 'watchman' };
+      if (playableDevCards(s, i).includes('watchman') && rng() < 0.5) return watchman(s, i, rng);
       return { type: 'ROLL_DICE' };
     case 'robber': {
       const hexes = topologyFor(s.board.layout).hexes.map((h) => h.id).filter((h) => h !== s.robber);
@@ -45,6 +63,7 @@ function decide(s, i, rng) {
         const card = pick(rng, playable);
         if (card === 'harvest') return { type: 'PLAY_DEV_CARD', card, resources: [pick(rng, RESOURCES), pick(rng, RESOURCES)] };
         if (card === 'chutzpah') return { type: 'PLAY_DEV_CARD', card, resource: pick(rng, RESOURCES) };
+        if (card === 'watchman') return watchman(s, i, rng);
         if (card !== 'pathfinder' || (me.piecesLeft.road > 0 && legalRoadEdges(s, i).length)) return { type: 'PLAY_DEV_CARD', card };
       }
       if (s.devDeck.length && hasAll(me.resources, COSTS.devCard) && rng() < 0.5) return { type: 'BUY_DEV_CARD' };

@@ -14,7 +14,7 @@ import {
   victoryPoints,
 } from '../supabase/functions/_shared/engine/index.js';
 import { createHandler } from '../supabase/functions/_shared/server/handler.js';
-import { decide } from './bots.js';
+import { decide, oasisPick } from './bots.js';
 import { createMemoryStore } from '../supabase/functions/_shared/server/memory-store.js';
 
 function checkInvariants(s) {
@@ -77,6 +77,13 @@ async function playFullGame(seed, players, settings = {}) {
       continue;
     }
 
+    if (s.phase === 'oasis') {
+      const i = Number(Object.keys(s.pendingOasis)[0]);
+      const res = await handle(s.players[i].userId, { op: 'action', gameId, action: oasisPick(s, i, rng) });
+      expect(res.ok, JSON.stringify(res.error)).toBe(true);
+      continue;
+    }
+
     // Occasionally another player answers an open offer.
     if (s.phase === 'main' && s.trades.length && rng() < 0.7) {
       const trade = s.trades[0];
@@ -112,6 +119,8 @@ const games = [
   [7, 3, { chaos: true, closeNeighbours: true, watchmanChoice: true }],
   [8, 5, { layout: 'grand', maxPlayers: 6 }],
   [9, 6, { layout: 'grand', maxPlayers: 6, chaos: true }],
+  [10, 4, { oasis: true }],
+  [11, 6, { oasis: true, layout: 'grand', maxPlayers: 6, chaos: true, watchmanChoice: true }],
   ...Array.from({ length: extra }, (_, k) =>
     k % 4 === 3 ? [100 + k, 5 + (k % 2), { layout: 'grand', maxPlayers: 6, chaos: k % 8 === 3 }] : [100 + k, 2 + (k % 3), k % 2 ? { chaos: true } : undefined],
   ),

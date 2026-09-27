@@ -86,6 +86,13 @@
     font-weight: 700;
   }
 
+  .entry--oasis {
+    margin-top: 6px;
+    padding: 8px 12px;
+    background: linear-gradient(90deg, rgba(47, 147, 173, 0.25), rgba(47, 147, 173, 0.05));
+    font-weight: 700;
+  }
+
   .entry--event {
     margin-top: 6px;
     padding: 8px 12px;

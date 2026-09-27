@@ -39,6 +39,7 @@ export function describe(preview, code) {
   const { host, players, settings, mapNumber, status, winner } = preview;
   const extras = [];
   if (settings.chaos) extras.push('chaos mode');
+  if (settings.oasis) extras.push('oasis mode');
   if (settings.turnTimer) extras.push(`${settings.turnTimer}s turns`);
   const rules = Object.keys(HOUSE_RULE_NAMES).filter((k) => settings[k]).map((k) => HOUSE_RULE_NAMES[k]);
   if (rules.length) extras.push(`house rules: ${rules.join(', ')}`);

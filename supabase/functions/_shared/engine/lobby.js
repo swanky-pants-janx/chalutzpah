@@ -47,6 +47,7 @@ export function normalizeSettings(input = {}) {
     watchmanChoice: input.watchmanChoice === true,
     turnTimer: TURN_TIMERS.includes(input.turnTimer) ? input.turnTimer : 0,
     chaos: input.chaos === true,
+    oasis: input.oasis === true,
     layout,
   };
 }
@@ -131,6 +132,7 @@ export function createGame({ gameId, code, settings, seed, host, now }) {
     trades: [],
     nextTradeId: 1,
     chaos: null,
+    pendingOasis: {},
     achievements: { longestRoad: null, largestArmy: null },
     roadLengths: [],
     log: [],
@@ -303,7 +305,9 @@ export function startGame(state, userId, { rng, now }) {
     rng,
     Object.entries(layout.devDeck).flatMap(([type, n]) => Array(n).fill(type)),
   );
-  s.chaos = s.settings.chaos ? newChaosDeck(rng) : null;
+  s.chaos = s.settings.chaos ? newChaosDeck(rng, s.settings) : null;
+  // Oasis mode: there is no Jackal.
+  if (s.settings.oasis) s.robber = null;
   s.status = 'setup';
   s.phase = 'setup_settlement';
   s.turn = {

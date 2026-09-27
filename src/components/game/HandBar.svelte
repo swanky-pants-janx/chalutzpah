@@ -1,7 +1,7 @@
 <script>
   import { DEV_CARD_LABELS, RESOURCES, RESOURCE_LABELS, landmarkCount } from '$engine';
   import Icon from '../ui/Icon.svelte';
-  import { CARD_ORDER, CARD_TEXT } from '../../game/cards.js';
+  import { CARD_ORDER, cardText } from '../../game/cards.js';
   import { RESOURCE_COLORS } from '../../lib/theme.js';
 
   let { view, controls, busy, onplay } = $props();
@@ -37,7 +37,7 @@
     {/if}
     {#each cards as card (card.type)}
       {@const canPlay = controls.playable.has(card.type) && card.count > card.fresh}
-      <div class="dev" title={CARD_TEXT[card.type]}>
+      <div class="dev" title={cardText(card.type, view.settings)}>
         <span class="dev-icon"><Icon name={card.type} size={22} /></span>
         <span class="dev-name">
           {DEV_CARD_LABELS[card.type]}{#if card.count > 1}<b> ×{card.count}</b>{/if}

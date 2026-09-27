@@ -37,14 +37,22 @@ export const EVENT_IDS = Object.freeze(Object.keys(EVENTS));
 
 export const currentEvent = (s) => (s.chaos?.current ? EVENTS[s.chaos.current] : null);
 
-export function newChaosDeck(rng) {
-  return { deck: shuffle(rng, EVENT_IDS), current: null, round: 0 };
+/** Events that only make sense with the Jackal on the board. */
+const JACKAL_EVENTS = new Set(['sandstorm', 'calmNight']);
+
+/** The event ids in play for a table's settings (oasis mode has no Jackal). */
+export function eventIdsFor(settings) {
+  return settings?.oasis ? EVENT_IDS.filter((id) => !JACKAL_EVENTS.has(id)) : EVENT_IDS;
+}
+
+export function newChaosDeck(rng, settings = {}) {
+  return { deck: shuffle(rng, eventIdsFor(settings)), current: null, round: 0 };
 }
 
 /** Start a new round's event (reshuffling when the deck runs out). */
 export function flipEvent(s, env) {
   if (!s.chaos) return;
-  if (s.chaos.deck.length === 0) s.chaos.deck = shuffle(env.rng, EVENT_IDS);
+  if (s.chaos.deck.length === 0) s.chaos.deck = shuffle(env.rng, eventIdsFor(s.settings));
   s.chaos.current = s.chaos.deck.pop();
   s.chaos.round += 1;
   const event = EVENTS[s.chaos.current];

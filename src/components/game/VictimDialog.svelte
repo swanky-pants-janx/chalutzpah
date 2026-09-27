@@ -2,11 +2,19 @@
   import Modal from '../ui/Modal.svelte';
   import { colorOf, inkOf } from '../../lib/theme.js';
 
-  let { view, victims, busy, onpick, onclose } = $props();
+  let {
+    view,
+    victims,
+    busy,
+    onpick,
+    onclose,
+    title = 'Who does the Jackal rob?',
+    text = "Several neighbours live beside that tile. Pick one — you'll snatch a random card from them.",
+  } = $props();
 </script>
 
-<Modal title="Who does the Jackal rob?" {onclose}>
-  <p>Several neighbours live beside that tile. Pick one — you'll snatch a random card from them.</p>
+<Modal {title} {onclose}>
+  <p>{text}</p>
   <div class="list">
     {#each victims as i (i)}
       {@const p = view.players[i]}
