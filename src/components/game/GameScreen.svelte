@@ -220,8 +220,9 @@
     discard: 'card',
     event: 'card',
     oasis: 'turn',
+    sunrise: 'victory',
   };
-  const SOUND_PRIORITY = ['victory', 'roll', 'achievement', 'event', 'oasis', 'jackal', 'steal', 'build', 'trade', 'card', 'discard'];
+  const SOUND_PRIORITY = ['victory', 'sunrise', 'roll', 'achievement', 'event', 'oasis', 'jackal', 'steal', 'build', 'trade', 'card', 'discard'];
 
   let heardSeq = null;
   $effect(() => {
@@ -248,6 +249,19 @@
   $effect(() => {
     const prefix = view.status === 'finished' ? '🏁 ' : controls?.myTurn || controls?.mustDiscard || controls?.mustPickOasis ? '● Your move — ' : '';
     document.title = `${prefix}Chalutzpah · ${view.code}`;
+  });
+
+  // Night Landing: announce sunrise when the island is revealed.
+  let sunriseShow = $state(false);
+  let wasDark = untrack(() => view.board.seed == null);
+  $effect(() => {
+    const dark = view.board.seed == null;
+    if (wasDark && !dark) {
+      sunriseShow = true;
+      play('victory');
+      setTimeout(() => (sunriseShow = false), 2600);
+    }
+    wasDark = dark;
   });
 
   let rollShow = $state(null);
@@ -365,6 +379,12 @@
           {#if mode && controls?.phase === 'main'}<button onclick={() => (mode = null)}>Cancel · Esc</button>{/if}
         </div>
       {/if}
+      {#if sunriseShow}
+        <div class="roll-banner sunrise">
+          <span class="sun" aria-hidden="true"></span>
+          <span class="roll-text"><small>Night Landing</small>Sunrise!</span>
+        </div>
+      {/if}
       {#if rollShow}
         <div class="roll-banner" class:seven={rollShow.total === 7 && !view.settings?.oasis} class:oasis-day={rollShow.total === 7 && view.settings?.oasis}>
           <Die value={rollShow.dice[0]} rolling size={64} />
@@ -381,7 +401,7 @@
         </div>
       {/if}
       <div class="supply" title="Cards left in the supply">
-        <Icon name="cards" size={16} /> Chutzpah deck {view.devDeckCount} · Map No. {view.board.seed}
+        <Icon name="cards" size={16} /> Chutzpah deck {view.devDeckCount} · {view.board.seed == null ? 'Island hidden until sunrise' : `Map No. ${view.board.seed}`}
       </div>
     </section>
 
@@ -609,6 +629,18 @@
 
   .roll-banner.seven {
     background: rgba(120, 22, 38, 0.92);
+  }
+
+  .roll-banner.sunrise {
+    background: linear-gradient(135deg, rgba(234, 165, 58, 0.95), rgba(179, 38, 62, 0.95));
+  }
+
+  .roll-banner .sun {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #fff4dc 30%, #f3c060 70%);
+    box-shadow: 0 0 30px rgba(255, 220, 140, 0.9);
   }
 
   .roll-banner.oasis-day {

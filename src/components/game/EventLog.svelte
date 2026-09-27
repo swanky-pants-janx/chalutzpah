@@ -86,6 +86,13 @@
     font-weight: 700;
   }
 
+  .entry--sunrise {
+    margin-top: 6px;
+    padding: 8px 12px;
+    background: linear-gradient(90deg, rgba(234, 165, 58, 0.4), rgba(234, 165, 58, 0.06));
+    font-weight: 800;
+  }
+
   .entry--oasis {
     margin-top: 6px;
     padding: 8px 12px;

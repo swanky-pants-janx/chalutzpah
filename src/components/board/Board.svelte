@@ -150,7 +150,7 @@
           class:glow={glowNumber !== null && tile.number === glowNumber && view.robber !== i}
           style="--delay: {h.ring * 90 + ((i * 37) % 60)}ms"
         >
-          <title>{oasis && tile.terrain === 'dunes' ? 'Oasis · pays out on a 7' : `${TERRAIN_LABELS[tile.terrain]}${tile.number ? ` · ${tile.number}` : ''}`}</title>
+          <title>{tile.terrain === 'hidden' ? 'Unknown land — revealed at sunrise' : oasis && tile.terrain === 'dunes' ? 'Oasis · pays out on a 7' : `${TERRAIN_LABELS[tile.terrain]}${tile.number ? ` · ${tile.number}` : ''}`}</title>
           <polygon points={G.tilePoints[i]} fill="url(#terrain-{oasis && tile.terrain === 'dunes' ? 'oasis' : tile.terrain})" class="tile-face" />
           <g transform="translate({h.x} {h.y})" class="art">
             {#if tile.terrain === 'grove'}
@@ -200,6 +200,11 @@
                   <path d="M12 -20 L20 -2 L6 4 Z" fill="#c9cfd6" opacity="0.6" />
                 </g>
               {/each}
+            {:else if tile.terrain === 'hidden'}
+              {#each [[-44, -40, 2.6], [30, -52, 2], [52, -6, 2.4], [-54, 18, 2], [-10, 52, 2.6], [40, 44, 1.8], [8, -20, 1.6]] as [x, y, r] (`${x},${y}`)}
+                <circle cx={x} cy={y} {r} fill="#f7efdc" opacity="0.75" />
+              {/each}
+              <text y="16" class="hidden-mark">?</text>
             {:else if tile.terrain === 'dunes' && oasis}
               <ellipse cx="0" cy="30" rx="58" ry="26" fill="#2f93ad" stroke="#8cc6a0" stroke-width="7" />
               <path d="M-34 26 Q-16 18 2 26 M8 36 Q24 28 40 36" stroke="#bfe8f2" stroke-width="3.5" fill="none" stroke-linecap="round" />
@@ -398,6 +403,14 @@
   .token.hot .token-number,
   .token.hot .pip {
     fill: #b3263e;
+  }
+
+  .hidden-mark {
+    text-anchor: middle;
+    font-size: 46px;
+    font-weight: 900;
+    fill: rgba(247, 239, 220, 0.28);
+    font-family: var(--font);
   }
 
   .oasis-token .token-disc {

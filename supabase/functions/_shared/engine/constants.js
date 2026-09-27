@@ -65,6 +65,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   turnTimer: 0, // seconds per turn; 0 = no timer
   chaos: false, // chaos mode: a new event card every round
   oasis: false, // oasis mode: no Jackal; a 7 is Oasis Day
+  nightLanding: false, // tiles stay hidden until setup ends (sunrise)
   layout: 'classic', // 'classic' (19 tiles, 2–4) or 'grand' (30 tiles, up to 6)
 });
 

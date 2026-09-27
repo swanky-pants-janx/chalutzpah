@@ -25,4 +25,4 @@ export {
   updateSettings,
   validateName,
 } from './lobby.js';
-export { mergeView, privateView, publicView, snapshot } from './views.js';
+export { isDark, mergeView, privateView, publicView, snapshot, visibleBoard } from './views.js';

@@ -2,7 +2,7 @@
   import { COSTS, DEV_CARD_LABELS, EVENTS, eventIdsFor } from '$engine';
   import Bundle from '../ui/Bundle.svelte';
   import Modal from '../ui/Modal.svelte';
-  import { ACHIEVEMENT_TEXT, CARD_ORDER, HOUSE_RULES, OASIS_TEXT, cardText } from '../../game/cards.js';
+  import { ACHIEVEMENT_TEXT, CARD_ORDER, HOUSE_RULES, NIGHT_TEXT, OASIS_TEXT, cardText } from '../../game/cards.js';
 
   let { onclose, settings = null } = $props();
   const activeRules = $derived(HOUSE_RULES.filter((rule) => settings?.[rule.key]));
@@ -24,6 +24,13 @@
             <li><b>{rule.name}</b> — {rule.text}</li>
           {/each}
         </ul>
+      </section>
+    {/if}
+
+    {#if settings?.nightLanding}
+      <section class="house">
+        <h3>Night Landing is on</h3>
+        <p>{NIGHT_TEXT}</p>
       </section>
     {/if}
 

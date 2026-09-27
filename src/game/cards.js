@@ -43,11 +43,19 @@ export const MODES = [
     text: 'A new event card every round: droughts, market days, sandstorms, caravans…',
   },
   {
+    key: 'nightLanding',
+    name: 'Night Landing',
+    text: "Place your starting pieces in the dark: the island's tiles stay hidden until sunrise, when the game begins.",
+  },
+  {
     key: 'oasis',
     name: 'Oasis mode',
     text: 'No Jackal. The Dunes become an Oasis, and a 7 is Oasis Day: no discards, the roller draws a free Chutzpah card, and everyone touching the Oasis picks a resource. Watchmen take a card from any player.',
   },
 ];
+
+export const NIGHT_TEXT =
+  'The island stays dark while everyone places their starting homesteads and trails — you can see the coast and harbors, but not the land. At sunrise the tiles are revealed and everyone collects their starting resources. The island is dealt fresh when the game starts, so nobody has seen it, not even the host.';
 
 export const OASIS_TEXT =
   'There is no Jackal. The Dunes are an Oasis. Rolling a 7 is Oasis Day: nobody discards, the roller draws a free Chutzpah card (playable from their next turn), and everyone with a homestead or kibbutz touching an Oasis picks one resource from the supply for each Oasis they touch. A Watchman takes a card from any player you choose.';

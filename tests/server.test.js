@@ -419,6 +419,21 @@ describe('invite previews', () => {
   });
 });
 
+describe('night landing previews', () => {
+  it('keep the island dark until sunrise', async () => {
+    const { handle } = setup();
+    const { gameId, code } = await hostAndJoin(handle, 2);
+    await handle('host', { op: 'update_settings', gameId, settings: { nightLanding: true } });
+    for (const status of ['lobby', 'setup']) {
+      if (status === 'setup') await handle('host', { op: 'start', gameId });
+      const { preview } = await handle(null, { op: 'preview', code });
+      expect(preview.status).toBe(status);
+      expect(preview.mapNumber).toBeNull();
+      expect(preview.board.hexes.every((h) => h.terrain === 'hidden' && h.number === null)).toBe(true);
+    }
+  });
+});
+
 describe('abandoned games', () => {
   async function playing(n = 3) {
     const env = setup();

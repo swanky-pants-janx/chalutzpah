@@ -21,6 +21,7 @@
   const openSeats = $derived(Math.max(0, view.settings.maxPlayers - view.players.length));
   const canStart = $derived(isHost && view.players.length >= MIN_PLAYERS);
   const inviteLink = $derived(`${location.origin}/join/${view.code}`);
+  const dark = $derived(view.settings?.nightLanding === true);
 
   let rolling = $state(false);
   let starting = $state(false);
@@ -260,14 +261,20 @@
     <div class="map-head">
       <div>
         <p class="eyebrow">The island</p>
-        <h2>
-          Map No. {view.board.seed}
-          <button class="copy-map" title="Copy map number" aria-label="Copy map number" onclick={() => copy(String(view.board.seed), 'Map number')}>
-            <Icon name="copy" size={16} />
-          </button>
-        </h2>
+        {#if dark}
+          <h2>Night Landing</h2>
+        {:else}
+          <h2>
+            Map No. {view.board.seed}
+            <button class="copy-map" title="Copy map number" aria-label="Copy map number" onclick={() => copy(String(view.board.seed), 'Map number')}>
+              <Icon name="copy" size={16} />
+            </button>
+          </h2>
+        {/if}
       </div>
-      {#if isHost}
+      {#if dark}
+        <span class="muted">Dealt fresh at the start — nobody sees it, not even the host</span>
+      {:else if isHost}
         <form class="map-load" onsubmit={loadMap}>
           <input class="input" bind:value={mapDraft} inputmode="numeric" maxlength="7" placeholder="Map number" aria-label="Load a map by number" />
           <button class="btn btn--small btn--light btn--tight" disabled={rolling || !mapDraft.trim()}>Load</button>
@@ -279,7 +286,7 @@
 
     <div class="map">
       <Board {view} preview shuffling={rolling} />
-      {#if isHost}
+      {#if isHost && !dark}
         <button class="reroll" onclick={() => reroll()} disabled={rolling} aria-label="Roll a new island">
           <Die value={faces[0]} {rolling} size={48} />
           <Die value={faces[1]} {rolling} size={48} tone="red" />
@@ -290,7 +297,9 @@
 
     <div class="map-foot">
       {#if isHost}
-        <p class="muted">Click the dice to re-roll the island until it feels right, then settle it.</p>
+        <p class="muted">
+          {dark ? 'The island stays dark until everyone has placed their starting pieces.' : 'Click the dice to re-roll the island until it feels right, then settle it.'}
+        </p>
         <button class="btn btn--big btn--tight" disabled={!canStart || starting || rolling} onclick={start}>
           <Icon name="flag" />
           {starting ? 'Settling…' : 'Settle this land'}

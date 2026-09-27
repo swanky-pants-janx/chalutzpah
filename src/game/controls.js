@@ -122,6 +122,14 @@ export function describeTurn(view, controls) {
     const secondRound = view.turn.setupIndex >= view.players.length;
     switch (view.phase) {
       case 'setup_settlement':
+        if (view.settings?.nightLanding) {
+          return {
+            title: 'Found a homestead — in the dark',
+            hint: secondRound
+              ? 'Your second homestead gathers its neighbours when the sun comes up.'
+              : 'The land is hidden until sunrise. Pick a corner and trust your luck.',
+          };
+        }
         return {
           title: 'Found a homestead',
           hint: secondRound

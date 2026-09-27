@@ -39,8 +39,9 @@ export function predictView(pub, priv, action) {
   let s = simulateAction(shadow, me, action);
   // Moving the Jackal onto a neighbour: show the move now, the stolen card later.
   if (!s && action.type === 'MOVE_ROBBER') s = moveJackalOnly(shadow, me, action);
-  // Let the server announce a win.
+  // Let the server announce a win, and reveal the island at sunrise.
   if (!s || s.status === 'finished') return null;
+  if (pub.settings?.nightLanding && pub.status === 'setup' && s.status !== 'setup') return null;
   return toViews(pub, priv, s, me);
 }
 

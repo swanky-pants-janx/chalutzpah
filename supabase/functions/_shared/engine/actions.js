@@ -199,16 +199,14 @@ function buildSettlement(s, actor, { vertex }, env) {
     s.turn.setupVertex = v;
     s.phase = 'setup_road';
     const isSecondRound = s.turn.setupIndex >= s.players.length;
-    if (isSecondRound) {
-      const gained = emptyHand();
-      for (const hex of topo(s).vertices[v].hexes) {
-        const resource = TERRAIN_RESOURCE[s.board.hexes[hex].terrain];
-        if (resource && s.bank[resource] > 0) gained[resource] += 1;
-      }
-      transfer(s.bank, player.resources, gained);
-      log(s, [P(s, actor), ' founded a Homestead and gathered ', B(gained)], 'build');
+    if (isSecondRound && s.settings.nightLanding) {
+      // Gathering now would give away what's under it: wait for sunrise.
+      s.turn.secondHomesteads = { ...(s.turn.secondHomesteads ?? {}), [actor]: v };
+      log(s, [P(s, actor), ' founded a Homestead in the dark.'], 'build');
+    } else if (isSecondRound) {
+      log(s, [P(s, actor), ' founded a Homestead and gathered ', B(gatherAround(s, actor, v))], 'build');
     } else {
-      log(s, [P(s, actor), ' founded a Homestead.'], 'build');
+      log(s, [P(s, actor), s.settings.nightLanding ? ' founded a Homestead in the dark.' : ' founded a Homestead.'], 'build');
     }
     return;
   }
@@ -222,6 +220,28 @@ function buildSettlement(s, actor, { vertex }, env) {
   placeBuilding(s, actor, v, 'settlement');
   log(s, [P(s, actor), ' founded a Homestead.'], 'build');
   updateLongestRoad(s);
+}
+
+/** One of each resource from the tiles around a starting homestead. */
+function gatherAround(s, idx, vertex) {
+  const gained = emptyHand();
+  for (const hex of topo(s).vertices[vertex].hexes) {
+    const resource = TERRAIN_RESOURCE[s.board.hexes[hex].terrain];
+    if (resource && s.bank[resource] > gained[resource]) gained[resource] += 1;
+  }
+  transfer(s.bank, s.players[idx].resources, gained);
+  return gained;
+}
+
+/** Night Landing: the tiles are revealed and starting resources handed out. */
+function sunrise(s) {
+  log(s, ['Sunrise! The land is revealed.'], 'sunrise');
+  s.players.forEach((_, i) => {
+    const vertex = s.turn.secondHomesteads?.[i];
+    if (vertex == null) return;
+    const gained = gatherAround(s, i, vertex);
+    if (handSize(gained) > 0) log(s, [P(s, i), ' gathered ', B(gained)], 'gain');
+  });
 }
 
 function placeBuilding(s, idx, vertex, kind) {
@@ -281,6 +301,7 @@ function advanceSetup(s, env) {
     s.phase = 'roll';
     s.turn.current = 0;
     s.turn.number = 1;
+    if (s.settings.nightLanding) sunrise(s);
     log(s, ['Every family has staked its claim. ', P(s, 0), ' rolls first.'], 'turn');
     flipEvent(s, env);
     return;

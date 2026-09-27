@@ -15,6 +15,7 @@ export const TERRAIN_LABELS = Object.freeze({
   terraces: 'Wheat Terraces',
   quarry: 'Quarry',
   dunes: 'Dunes',
+  hidden: 'Unknown land',
 });
 
 export const PIECE_LABELS = Object.freeze({

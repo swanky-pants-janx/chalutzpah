@@ -27,4 +27,5 @@ export const TERRAIN_COLORS = {
   terraces: ['#f2ca5c', '#d8a232'],
   quarry: ['#a5acb6', '#6f7784'],
   dunes: ['#f2e2b3', '#dcc382'],
+  hidden: ['#34425c', '#1c2636'], // Night Landing: land not yet seen
 };

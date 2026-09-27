@@ -4,8 +4,26 @@
 import { handSize } from './hand.js';
 import { landmarkCount, victoryPoints } from './rules.js';
 
+/** Night Landing keeps the island dark (for everyone) until setup ends. */
+export function isDark(s) {
+  return s.settings?.nightLanding === true && (s.status === 'lobby' || s.status === 'setup');
+}
+
+/** The board as players may see it: in the dark, only the coast and harbors. */
+export function visibleBoard(s) {
+  if (!isDark(s)) return s.board;
+  return {
+    layout: s.board.layout,
+    seed: null,
+    desert: null,
+    harbors: s.board.harbors,
+    hexes: s.board.hexes.map(() => ({ terrain: 'hidden', number: null })),
+  };
+}
+
 export function publicView(s) {
   const finished = s.status === 'finished';
+  const dark = isDark(s);
   return {
     id: s.id,
     code: s.code,
@@ -13,9 +31,9 @@ export function publicView(s) {
     phase: s.phase,
     settings: s.settings,
     hostId: s.hostId,
-    board: s.board,
+    board: visibleBoard(s),
     mapRolls: s.mapRolls,
-    robber: s.robber,
+    robber: dark ? null : s.robber,
     buildings: s.buildings,
     roads: s.roads,
     bank: s.bank,

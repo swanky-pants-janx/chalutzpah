@@ -120,6 +120,8 @@ const games = [
   [8, 5, { layout: 'grand', maxPlayers: 6 }],
   [9, 6, { layout: 'grand', maxPlayers: 6, chaos: true }],
   [10, 4, { oasis: true }],
+  [12, 3, { nightLanding: true }],
+  [13, 5, { nightLanding: true, layout: 'grand', maxPlayers: 6, oasis: true, chaos: true }],
   [11, 6, { oasis: true, layout: 'grand', maxPlayers: 6, chaos: true, watchmanChoice: true }],
   ...Array.from({ length: extra }, (_, k) =>
     k % 4 === 3 ? [100 + k, 5 + (k % 2), { layout: 'grand', maxPlayers: 6, chaos: k % 8 === 3 }] : [100 + k, 2 + (k % 3), k % 2 ? { chaos: true } : undefined],

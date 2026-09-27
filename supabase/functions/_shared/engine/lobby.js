@@ -14,7 +14,7 @@ import {
   VP_TARGETS,
 } from './constants.js';
 import { checkVictory, makeEnv, resolveAbsent, startClock } from './actions.js';
-import { generateBoard } from './board.js';
+import { generateBoard, randomMapNumber } from './board.js';
 import { newChaosDeck } from './events.js';
 import { LAYOUT_IDS, layoutOf } from './layouts.js';
 import { GameError } from './errors.js';
@@ -48,6 +48,7 @@ export function normalizeSettings(input = {}) {
     turnTimer: TURN_TIMERS.includes(input.turnTimer) ? input.turnTimer : 0,
     chaos: input.chaos === true,
     oasis: input.oasis === true,
+    nightLanding: input.nightLanding === true,
     layout,
   };
 }
@@ -306,6 +307,11 @@ export function startGame(state, userId, { rng, now }) {
     Object.entries(layout.devDeck).flatMap(([type, n]) => Array(n).fill(type)),
   );
   s.chaos = s.settings.chaos ? newChaosDeck(rng, s.settings) : null;
+  // Night Landing: deal a fresh island nobody has seen — not even the host.
+  if (s.settings.nightLanding) {
+    s.board = generateBoard(randomMapNumber(rng), s.settings.layout);
+    s.robber = s.board.desert;
+  }
   // Oasis mode: there is no Jackal.
   if (s.settings.oasis) s.robber = null;
   s.status = 'setup';
