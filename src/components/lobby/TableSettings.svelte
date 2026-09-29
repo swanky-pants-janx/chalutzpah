@@ -1,5 +1,5 @@
 <script>
-  import { LAYOUTS, LAYOUT_IDS, MIN_PLAYERS, TURN_TIMERS, VP_TARGETS } from '$engine';
+  import { LAYOUTS, LAYOUT_IDS, MIN_PLAYERS, TURN_TIMERS, VP_TARGETS, VP_TARGET_NAMES } from '$engine';
   import { HOUSE_RULES, MODES } from '../../game/cards.js';
 
   const timerLabel = (s) => (s === 0 ? 'Off' : s < 120 ? `${s}s` : `${s / 60} min`);
@@ -53,8 +53,15 @@
     <span class="label">Points to win</span>
     <div class="segmented" role="group" aria-label="Points to win">
       {#each VP_TARGETS as n (n)}
-        <button type="button" aria-pressed={settings.vpTarget === n} disabled={!isHost || busy} onclick={() => onchange({ vpTarget: n })}>
-          {n}
+        <button
+          type="button"
+          class="target"
+          aria-pressed={settings.vpTarget === n}
+          aria-label="{n} points ({VP_TARGET_NAMES[n]})"
+          disabled={!isHost || busy}
+          onclick={() => onchange({ vpTarget: n })}
+        >
+          {n}<small>{VP_TARGET_NAMES[n]}</small>
         </button>
       {/each}
     </div>
@@ -146,6 +153,22 @@
     letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--text-muted);
+  }
+
+  .segmented button {
+    padding-inline: 8px;
+    white-space: nowrap;
+  }
+
+  .target {
+    display: grid;
+    line-height: 1.1;
+  }
+
+  .target small {
+    font-size: 0.68rem;
+    font-weight: 600;
+    opacity: 0.75;
   }
 
   .segmented button:disabled {

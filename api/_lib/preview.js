@@ -38,6 +38,7 @@ export function describe(preview, code) {
   }
   const { host, players, settings, mapNumber, status, winner } = preview;
   const extras = [];
+  if (settings.vpTarget === 5) extras.push('blitz');
   if (settings.chaos) extras.push('chaos mode');
   if (settings.oasis) extras.push('oasis mode');
   if (settings.nightLanding) extras.push('night landing');

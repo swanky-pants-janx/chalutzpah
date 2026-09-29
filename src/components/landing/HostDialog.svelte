@@ -1,5 +1,5 @@
 <script>
-  import { NAME_MAX_LENGTH, VP_TARGETS } from '$engine';
+  import { NAME_MAX_LENGTH, VP_TARGETS, VP_TARGET_NAMES } from '$engine';
   import Modal from '../ui/Modal.svelte';
   import Icon from '../ui/Icon.svelte';
   import { callGame } from '../../lib/api.js';
@@ -49,8 +49,8 @@
       <span>Points to win</span>
       <div class="segmented" role="group" aria-label="Points to win">
         {#each VP_TARGETS as n (n)}
-          <button type="button" aria-pressed={vpTarget === n} onclick={() => (vpTarget = n)}>
-            {n}{n === 10 ? ' · classic' : n === 8 ? ' · quick' : ' · long'}
+          <button type="button" class="target" aria-pressed={vpTarget === n} aria-label="{n} points ({VP_TARGET_NAMES[n]})" onclick={() => (vpTarget = n)}>
+            {n}<small>{VP_TARGET_NAMES[n]}</small>
           </button>
         {/each}
       </div>
@@ -69,6 +69,17 @@
   .form {
     display: grid;
     gap: 25px;
+  }
+
+  .target {
+    display: grid;
+    line-height: 1.1;
+  }
+
+  .target small {
+    font-size: 0.7rem;
+    font-weight: 600;
+    opacity: 0.75;
   }
 
   .hint {

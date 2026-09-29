@@ -55,7 +55,11 @@
 
     <section>
       <h3>Goal</h3>
-      <p>Be the first to reach the target score (10 by default) <em>during your own turn</em>.</p>
+      <p>
+        Be the first to reach the target score <em>during your own turn</em>{#if settings?.vpTarget}
+          — this table plays to <b>{settings.vpTarget} points</b>{settings.vpTarget === 5 ? ' (Blitz)' : ''}{:else}
+          (10 by default){/if}.
+      </p>
     </section>
 
     <section>

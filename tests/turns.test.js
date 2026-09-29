@@ -47,6 +47,15 @@ describe('turn order', () => {
 });
 
 describe('victory', () => {
+  it('Blitz: reaching 5 points on your turn wins', () => {
+    const s = blankMain(2, { settings: { maxPlayers: 4, vpTarget: 5 } });
+    for (const v of [0, 8, 16, 24]) putBuilding(s, 0, v); // 4 points
+    give(s, 0, COSTS.city);
+    const next = act(s, 0, { type: 'BUILD_CITY', vertex: 0 }); // 5 points
+    expect(next.status).toBe('finished');
+    expect(next.winner).toBe(0);
+  });
+
   it('ends the game when the current player reaches the target', () => {
     const s = blankMain(2, { settings: { maxPlayers: 4, vpTarget: 8 } });
     for (const v of [0, 8, 16, 24, 32, 40, 48]) putBuilding(s, 0, v); // 7 points

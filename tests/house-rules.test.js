@@ -106,3 +106,10 @@ describe('house rule: choosy Watchman', () => {
     expect(() => act(s, 0, { type: 'MOVE_ROBBER', hex, victim: 1, resource: 'gold' })).toThrow(/Name a resource/);
   });
 });
+
+describe('blitz', () => {
+  it('lets the host play to 5 points', () => {
+    const next = updateSettings(lobby(2), users[0], { vpTarget: 5 });
+    expect(next.settings.vpTarget).toBe(5);
+  });
+});

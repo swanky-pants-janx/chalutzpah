@@ -121,6 +121,8 @@ const games = [
   [9, 6, { layout: 'grand', maxPlayers: 6, chaos: true }],
   [10, 4, { oasis: true }],
   [12, 3, { nightLanding: true }],
+  [14, 4, { vpTarget: 5 }],
+  [15, 6, { vpTarget: 5, layout: 'grand', maxPlayers: 6, chaos: true }],
   [13, 5, { nightLanding: true, layout: 'grand', maxPlayers: 6, oasis: true, chaos: true }],
   [11, 6, { oasis: true, layout: 'grand', maxPlayers: 6, chaos: true, watchmanChoice: true }],
   ...Array.from({ length: extra }, (_, k) =>

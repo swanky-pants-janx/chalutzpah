@@ -55,7 +55,8 @@ export const ACHIEVEMENT_VP = 2;
 
 export const MIN_PLAYERS = 2;
 export const MAX_PLAYERS = 6; // grand island; classic tables cap at 4
-export const VP_TARGETS = Object.freeze([8, 10, 12]);
+/** Points to win: 5 is Blitz. */
+export const VP_TARGETS = Object.freeze([5, 8, 10, 12]);
 export const DEFAULT_SETTINGS = Object.freeze({
   maxPlayers: 4,
   vpTarget: 10,

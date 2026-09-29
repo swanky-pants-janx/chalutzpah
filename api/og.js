@@ -113,7 +113,7 @@ function sidePanel(preview, code) {
     ),
     el(
       { fontSize: 22, color: 'rgba(247,239,220,0.6)' },
-      [`First to ${settings.vpTarget}`, mapNumber ? `Map No. ${mapNumber}` : 'Night Landing', settings.oasis && 'Oasis mode', settings.chaos && 'Chaos mode', settings.turnTimer && `${settings.turnTimer}s turns`]
+      [settings.vpTarget === 5 ? 'Blitz: first to 5' : `First to ${settings.vpTarget}`, mapNumber ? `Map No. ${mapNumber}` : 'Night Landing', settings.oasis && 'Oasis mode', settings.chaos && 'Chaos mode', settings.turnTimer && `${settings.turnTimer}s turns`]
         .filter(Boolean)
         .join(' · '),
     ),

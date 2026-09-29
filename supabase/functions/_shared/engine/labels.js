@@ -46,3 +46,11 @@ export const HARBOR_LABELS = Object.freeze({
   wheat: 'Wheat harbor 2:1',
   stone: 'Stone harbor 2:1',
 });
+
+/** Names for the points-to-win choices. */
+export const VP_TARGET_NAMES = Object.freeze({
+  5: 'Blitz',
+  8: 'Quick',
+  10: 'Classic',
+  12: 'Long',
+});

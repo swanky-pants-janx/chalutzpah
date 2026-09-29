@@ -75,7 +75,7 @@ Set by the host in the lobby, and visible to everyone there:
 
 - **Island:** Classic (19 tiles, up to 4 players) or Grand (30 tiles, 11 harbors, a supply of 24 and a 34-card deck, up to 6 players). Layouts live in `engine/layouts.js` and `engine/topology.js`.
 - **Map number:** every island has a number from 1 to 999999, which is also its seed. The host can type one in to replay a favourite island.
-- **Points to win:** 8, 10 or 12.
+- **Points to win:** 5 (Blitz), 8 (Quick), 10 (Classic) or 12 (Long).
 - **Turn timer:** off, 60 s, 90 s, 2 min or 3 min. The server stores the deadline. When it passes, any browser can call time, and the server checks its own clock, then finishes the turn minimally (roll, auto-discard, move the Jackal) and passes it. Nothing is built or traded for the player.
 - **Chaos mode:** a new event card every round from an original 15-card deck (`engine/events.js`): droughts and booms, Market Day, Calm Night, Caravan, Sandstorm, Tithe, Windfall, Shifting Sands and more.
 - **Night Landing:** the island stays dark while everyone places their starting pieces. You can see the coast and harbors, but no terrain or numbers. The island is dealt fresh at the start, and the server sends nothing about the land until setup ends. At sunrise the tiles are revealed and everyone collects their starting resources.
@@ -127,7 +127,7 @@ tests/                       engine, server, UI-logic and database tests
 ## Tests
 
 ```bash
-npm test                     # 196 tests, ~6s
+npm test                     # 200 tests, ~6s
 SIM_GAMES=300 npm test       # plus 300 extra full bot games as a stress test
 ```
 
